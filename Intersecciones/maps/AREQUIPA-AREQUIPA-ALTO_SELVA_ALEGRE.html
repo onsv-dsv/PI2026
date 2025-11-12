@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_4c272375130201a7fc2764e876ff07a5 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+    <style>
+      .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+    </style>
+    
+    
+    <div style="
+        position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+        z-index: 9999; background: rgba(255,255,255,0.9);
+        padding: 8px 14px; border-radius: 8px; font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;">
+        AREQUIPA-AREQUIPA-ALTO_SELVA_ALEGRE
+    </div>
+    
+    
+    <div style="
+        position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+        background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
+            <span>Azul: Intersección priorizada</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="display:inline-block; width:14px; height:14px; background:#d90429; border-radius:50%;"></span>
+            <span>Rojo: Siniestro fatal</span>
+        </div>
+    </div>
+    
+    
+            <div class="folium-map" id="map_4c272375130201a7fc2764e876ff07a5" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_4c272375130201a7fc2764e876ff07a5 = L.map(
+                "map_4c272375130201a7fc2764e876ff07a5",
+                {
+                    center: [-16.363799200000003, -71.52076335],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 14,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+            L.control.scale().addTo(map_4c272375130201a7fc2764e876ff07a5);
+
+            
+
+        
+    
+            var tile_layer_a2317202d187c94ec98c78d2cc426d3a = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_a2317202d187c94ec98c78d2cc426d3a.addTo(map_4c272375130201a7fc2764e876ff07a5);
+        
+    
+            var feature_group_8c01c33cae3b5740581f1bd665a74f35 = L.featureGroup(
+                {
+}
+            );
+        
+    
+        function geo_json_ba481e62aac4d9782be9e013491b09b4_styler(feature) {
+            switch(feature.properties.IDDPTO) {
+                default:
+                    return {"color": "#222222", "fill": true, "fillColor": "#FFA500", "fillOpacity": 0.6, "opacity": 1.0, "weight": 2.5};
+            }
+        }
+
+        function geo_json_ba481e62aac4d9782be9e013491b09b4_onEachFeature(feature, layer) {
+
+            layer.on({
+            });
+        };
+        var geo_json_ba481e62aac4d9782be9e013491b09b4 = L.geoJson(null, {
+                onEachFeature: geo_json_ba481e62aac4d9782be9e013491b09b4_onEachFeature,
+            
+                style: geo_json_ba481e62aac4d9782be9e013491b09b4_styler,
+            ...{
+}
+        });
+
+        function geo_json_ba481e62aac4d9782be9e013491b09b4_add (data) {
+            geo_json_ba481e62aac4d9782be9e013491b09b4
+                .addData(data);
+        }
+            geo_json_ba481e62aac4d9782be9e013491b09b4_add({"features": [{"geometry": {"coordinates": [[[[-71.45476535599988, -16.286247233999973], [-71.45357498099997, -16.286249108999982], [-71.45207210599989, -16.286043233999976], [-71.4506378559999, -16.286167108999962], [-71.44860085599993, -16.286575358999983], [-71.44787598099998, -16.286771733999956], [-71.44525910599992, -16.28669923299998], [-71.44454960599984, -16.28675835799993], [-71.44248960599992, -16.287195357999906], [-71.44142910599993, -16.287548108999886], [-71.43907923099994, -16.28847123399987], [-71.43772885599992, -16.289113983999982], [-71.43681335599996, -16.289934108999944], [-71.43566135599991, -16.289657608999903], [-71.43404385599996, -16.289270358999943], [-71.4328689809999, -16.289552733999926], [-71.43054960599994, -16.289531732999876], [-71.42929835599995, -16.289884607999966], [-71.42517085599997, -16.29042035899994], [-71.42105098099995, -16.292070357999876], [-71.41901398099998, -16.29345698399993], [-71.41652698099989, -16.294660608999948], [-71.41410823099989, -16.295576108999967], [-71.4119338559999, -16.296007108999902], [-71.41060635599996, -16.29621123399994], [-71.41107923099992, -16.29668048399992], [-71.41139985599989, -16.29692073399991], [-71.4117661059999, -16.297189732999982], [-71.41219335599999, -16.297510108999916], [-71.41287235599987, -16.298095733999958], [-71.41393285599986, -16.298812858999895], [-71.42507173099983, -16.305084233999935], [-71.42787173099987, -16.308546107999916], [-71.43069448099999, -16.31295585899983], [-71.43460848099994, -16.317275983999934], [-71.43564610599998, -16.317867233999948], [-71.44224548099999, -16.320508983999957], [-71.44522860599989, -16.322399108999832], [-71.44584660599986, -16.32313535899982], [-71.44620510599992, -16.32402798399994], [-71.44638060599988, -16.32467835899996], [-71.4461593559999, -16.326692608999963], [-71.4461593559999, -16.327333483999894], [-71.44652560599991, -16.327903608999975], [-71.44690698099993, -16.328172733999963], [-71.44790648099996, -16.32858848399991], [-71.44947810599996, -16.329702358999953], [-71.45093535599989, -16.33037760899998], [-71.45131685599995, -16.33069985899988], [-71.45282748099999, -16.332353608999938], [-71.45500948099993, -16.334051108999972], [-71.45616135599994, -16.334649983999952], [-71.45661923099982, -16.334991483999886], [-71.4575347309999, -16.33582498399994], [-71.45855710599994, -16.336933108999972], [-71.45941160599995, -16.337486233999982], [-71.4606553559999, -16.337926858999936], [-71.46157835599996, -16.33840560899995], [-71.46217348099992, -16.338901482999916], [-71.46292873099998, -16.34024423399984], [-71.4637374809999, -16.341047233999916], [-71.46475223099986, -16.34228323399998], [-71.46666723099986, -16.344209608999904], [-71.46702573099992, -16.344644608999943], [-71.46740723099998, -16.344970858999943], [-71.46795648099993, -16.345739358999936], [-71.46800235599994, -16.34575460899987], [-71.4690704809999, -16.346692983999958], [-71.46932998099999, -16.34704785899993], [-71.47012323099989, -16.347789733999946], [-71.47038273099997, -16.348152108999898], [-71.47097010599998, -16.348607983999955], [-71.47145848099996, -16.349079108999945], [-71.4731063559999, -16.351282108999953], [-71.47412873099995, -16.352209108999944], [-71.47500610599997, -16.352901483999915], [-71.4782104819999, -16.355848358999935], [-71.47972873099991, -16.35673523399987], [-71.48256685599989, -16.35796360899991], [-71.48561860599989, -16.359714482999834], [-71.48658748099996, -16.360193233999837], [-71.48663335599991, -16.36021223399996], [-71.48805235599991, -16.360773108999922], [-71.48908998199988, -16.361381483999935], [-71.48971560599995, -16.36184123399994], [-71.49075323099993, -16.362821607999877], [-71.49195098099983, -16.364463858999954], [-71.49388135699996, -16.366205233999892], [-71.4941558559999, -16.366453108999963], [-71.49475098099987, -16.36686710899994], [-71.49575810599998, -16.367170358999886], [-71.49655910699988, -16.367532858999937], [-71.49767298199987, -16.368324233999886], [-71.49856573099993, -16.369258858999956], [-71.49889373099995, -16.369489608999857], [-71.49952698099997, -16.36973573399996], [-71.49999998099992, -16.369823483999937], [-71.50074773099988, -16.369626983999922], [-71.50116735599988, -16.36968610899993], [-71.50170898099992, -16.369678483999962], [-71.50236510599996, -16.369853983999974], [-71.50323485599989, -16.37048535899993], [-71.50343310599993, -16.370559733999926], [-71.50491335599997, -16.37170785899997], [-71.50672148099989, -16.372686358999943], [-71.50784298099995, -16.373447358999954], [-71.50893398099998, -16.374326733999965], [-71.50986485599992, -16.374875983999914], [-71.5117111059999, -16.37632760899993], [-71.51297760599988, -16.377487233999886], [-71.51311498099989, -16.377721608999934], [-71.51358798099994, -16.378152857999964], [-71.51423648099995, -16.379041733999884], [-71.51437373099998, -16.379833233999932], [-71.51438898099997, -16.380384608999975], [-71.51477810599994, -16.38138385799988], [-71.51506810599994, -16.38175960899997], [-71.51630398099996, -16.382957483999974], [-71.51663973099994, -16.383230233999882], [-71.51670073099996, -16.383476233999886], [-71.51702123099989, -16.38408273399989], [-71.51773835599988, -16.38501735899996], [-71.51837160599996, -16.385318733999952], [-71.51912685599996, -16.38558385899995], [-71.51983648099997, -16.385774608999895], [-71.52002698099989, -16.385869983999896], [-71.5203628569999, -16.386146483999937], [-71.52084348099987, -16.38677410899993], [-71.52126310599994, -16.387212732999956], [-71.52182010599995, -16.387470108999935], [-71.52262873099988, -16.387727733999952], [-71.52320098099989, -16.388069108999957], [-71.52390285599995, -16.38866248399995], [-71.52473448099994, -16.389574108999966], [-71.52526860599988, -16.389814358999956], [-71.52599348099994, -16.389942108999946], [-71.52758785599997, -16.3903656089999], [-71.52858785599989, -16.39054648399997], [-71.52861210599997, -16.390485358999968], [-71.52876885599994, -16.390264483999886], [-71.5288044809999, -16.390036608999935], [-71.52876910599997, -16.38986373399996], [-71.52874748099998, -16.389758608999955], [-71.52860498099989, -16.389445233999936], [-71.52857648099996, -16.389238608999904], [-71.5287403559999, -16.3889251089999], [-71.52875598099996, -16.388893733999964], [-71.52891848099989, -16.388568983999846], [-71.52896110599988, -16.388528858999962], [-71.52901535699993, -16.388439733999974], [-71.52916060599995, -16.388340983999967], [-71.5294099809999, -16.38814860899987], [-71.52958098099992, -16.387984732999882], [-71.52980185599989, -16.3876357339999], [-71.52993010599994, -16.38746460899995], [-71.5300938559999, -16.387350733999938], [-71.5304073559999, -16.38723673399994], [-71.53079210699997, -16.38716548399998], [-71.53121948099994, -16.387108483999953], [-71.53183210599991, -16.386987483999974], [-71.53221210699985, -16.3869147339999], [-71.53266748099998, -16.386896608999848], [-71.53317748199999, -16.38671435899994], [-71.53337773099992, -16.38649585899998], [-71.5333959809999, -16.38624085899994], [-71.53330498099996, -16.38569448399994], [-71.53310460599988, -16.384965858999976], [-71.53270385599996, -16.3836727339999], [-71.53221210599992, -16.382616358999883], [-71.53197535599998, -16.38186960899992], [-71.53179323099994, -16.380813108999916], [-71.53179323099994, -16.379811358999973], [-71.5317749809999, -16.378281483999956], [-71.53158398099993, -16.377089858999966], [-71.53119923099996, -16.37659573399992], [-71.53060010599995, -16.376270108999904], [-71.53022948099994, -16.376210358999913], [-71.53008610599989, -16.376066858999877], [-71.53012185599994, -16.3759233589999], [-71.53048048099993, -16.37551710899993], [-71.53067898099994, -16.375327608999896], [-71.53074348099994, -16.37526610899988], [-71.53114448099996, -16.37489260899997], [-71.53171748099993, -16.37458973399987], [-71.53231048099997, -16.37428910899996], [-71.53272073099998, -16.37400385899997], [-71.53313873099995, -16.373396483999898], [-71.5339808569999, -16.371274108999955], [-71.53417185599989, -16.370673858999965], [-71.53472085599992, -16.36834960899995], [-71.53474023099994, -16.3675644839999], [-71.53557135699998, -16.367351858999882], [-71.53622435599982, -16.368303358999924], [-71.53625485599986, -16.368022858999893], [-71.53635410599998, -16.36763948399988], [-71.53637698099993, -16.36733823399993], [-71.53667448099992, -16.36636348299993], [-71.53685748099997, -16.365463233999947], [-71.53707885599982, -16.36308860899993], [-71.5370864809999, -16.36246873399989], [-71.5370102309999, -16.361736358999963], [-71.5370102309999, -16.360359233999873], [-71.53707885599982, -16.359332983999877], [-71.53664398099988, -16.357164358999967], [-71.53678898099997, -16.356424358999902], [-71.53726960599988, -16.354892733999918], [-71.53735348099997, -16.354286233999915], [-71.53726960599988, -16.353467983999906], [-71.53682710599998, -16.35165210899993], [-71.53669748099998, -16.35072323399993], [-71.53649135599989, -16.348207483999943], [-71.53601835599983, -16.344276483999977], [-71.53607173099988, -16.343131983999854], [-71.53613285599988, -16.342742858999884], [-71.5361557309999, -16.34142498299991], [-71.53605648099995, -16.34044648399987], [-71.53603360599993, -16.33959573399983], [-71.53581235599984, -16.33842273399995], [-71.53563685599988, -16.337833358999944], [-71.5351714809999, -16.33660510899989], [-71.53495785599983, -16.335645733999854], [-71.53456873099998, -16.333450358999926], [-71.53427110599995, -16.33276748399993], [-71.53395073099989, -16.332246733999966], [-71.53268435599995, -16.33069223399997], [-71.53180698199998, -16.329433482999946], [-71.53144835599988, -16.328845983999884], [-71.53015898099994, -16.327142733999835], [-71.52994535599998, -16.326925233999873], [-71.5281906059999, -16.325521483999978], [-71.52678685599994, -16.324531608999962], [-71.52603910599998, -16.32409473399997], [-71.52543648099993, -16.323869733999913], [-71.52501673099994, -16.323781983999936], [-71.52445223099994, -16.32373423399997], [-71.52332310599996, -16.32341385899997], [-71.52211760599994, -16.322915983999962], [-71.52125548099986, -16.322446858999967], [-71.52019498099986, -16.321660983999948], [-71.51982110599994, -16.321426357999883], [-71.51885223099998, -16.320636733999947], [-71.51799010599996, -16.319782233999945], [-71.51725773099992, -16.318809483999928], [-71.51702123099989, -16.318582483999876], [-71.51643373099995, -16.318401358999893], [-71.51549535599986, -16.31824873399995], [-71.51425935599991, -16.31797223399991], [-71.51322160599995, -16.317834983999944], [-71.51280210599992, -16.31777760899996], [-71.51202398099997, -16.317369483999983], [-71.5117873559999, -16.31720923399996], [-71.51116948099997, -16.31678385899994], [-71.5077896059999, -16.31556710899997], [-71.50672148099989, -16.314876607999963], [-71.50620273099997, -16.31438635899997], [-71.50576785599998, -16.31356235899989], [-71.50570673099998, -16.313341108999907], [-71.50543973099997, -16.312828108999895], [-71.50463873099994, -16.311769483999967], [-71.50438698099993, -16.311538733999896], [-71.50415798099988, -16.311418483999887], [-71.5035399809999, -16.31131360799992], [-71.50250248099996, -16.311412858999972], [-71.50131223099999, -16.31138998399996], [-71.50082398099988, -16.311300233999873], [-71.49999998099992, -16.311265982999885], [-71.49958035599997, -16.31124873399989], [-71.49860385599999, -16.311208732999944], [-71.49628448099992, -16.31080823399992], [-71.49485010599989, -16.310884483999928], [-71.49445348099994, -16.3107433589999], [-71.49424748099995, -16.310613608999915], [-71.49388885699994, -16.31038285799991], [-71.49316423199991, -16.309724858999914], [-71.49295048099992, -16.309345233999863], [-71.49206548099988, -16.30659673399998], [-71.49153135599994, -16.305582108999886], [-71.4910278559999, -16.30496973299995], [-71.49026485599995, -16.30453110899998], [-71.48963160599993, -16.304328858999952], [-71.48934173099985, -16.30423360899988], [-71.48680098099993, -16.304252607999956], [-71.48587035599996, -16.303987608999932], [-71.48512273099993, -16.30357173399989], [-71.48471073099995, -16.303159732999916], [-71.48448185699993, -16.302926983999953], [-71.48384860599992, -16.30207248399995], [-71.4827576059999, -16.300277733999962], [-71.4826431059999, -16.30018998399987], [-71.4822082309999, -16.299394608999876], [-71.48136135599998, -16.29823110899997], [-71.48081210599986, -16.297836358999916], [-71.48034673099988, -16.297697107999966], [-71.47946935599987, -16.297435733999976], [-71.47810360599993, -16.296592733999944], [-71.47747798099994, -16.295913733999896], [-71.47628785599989, -16.29482273399998], [-71.47520448099993, -16.29392623399997], [-71.4747391059999, -16.29250148299991], [-71.4745331069999, -16.292186733999927], [-71.47438048099997, -16.291942608999875], [-71.47392273099996, -16.291637358999935], [-71.47321323099993, -16.2914772339999], [-71.47040548099989, -16.29123498399997], [-71.46894835599994, -16.291496233999965], [-71.4675522309999, -16.29196160799995], [-71.46596523099993, -16.29218098399997], [-71.4657287309999, -16.292108483999925], [-71.46527098099995, -16.291971108999917], [-71.46472173099983, -16.29151535899996], [-71.46435548099998, -16.29102710899997], [-71.46406560599996, -16.290372857999955], [-71.46363835599988, -16.28964423399998], [-71.46227260599994, -16.289031983999905], [-71.4615936059999, -16.288354858999924], [-71.46118160599991, -16.288030608999918], [-71.46099085599997, -16.287757858999953], [-71.46078485599998, -16.28686335899988], [-71.46035760599995, -16.285995483999955], [-71.46022798099989, -16.2849922339999], [-71.46007535599995, -16.284526858999925], [-71.45951085599995, -16.284511608999935], [-71.45874023099998, -16.284671733999915], [-71.45835110599995, -16.284826233999922], [-71.45623773099987, -16.28596685899987], [-71.45476535599988, -16.286247233999973]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "SELVA ALEGRE", "CODCCPP": "0001", "DEPARTAMEN": "AREQUIPA", "DISTRITO": "ALTO SELVA ALEGRE", "FUENTE": "INEI", "IDDIST": "040102", "IDDPTO": "04", "IDPROV": "0401", "PROVINCIA": "AREQUIPA"}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+            geo_json_ba481e62aac4d9782be9e013491b09b4.addTo(feature_group_8c01c33cae3b5740581f1bd665a74f35);
+        
+    
+            feature_group_8c01c33cae3b5740581f1bd665a74f35.addTo(map_4c272375130201a7fc2764e876ff07a5);
+        
+    
+            var feature_group_75a04a04d67981119f084f23eb0902ba = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var circle_0e427b72ee255865d22f1b85eb4338d8 = L.circle(
+                [-16.365769, -71.5243462],
+                {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
+            ).addTo(feature_group_75a04a04d67981119f084f23eb0902ba);
+        
+    
+            var circle_df47f944dc3b6e2e29e4f448db64f150 = L.circle(
+                [-16.3618294, -71.5171805],
+                {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
+            ).addTo(feature_group_75a04a04d67981119f084f23eb0902ba);
+        
+    
+            feature_group_75a04a04d67981119f084f23eb0902ba.addTo(map_4c272375130201a7fc2764e876ff07a5);
+        
+    
+            var feature_group_b7b96481f6c67fade995f8703dd43a35 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var circle_marker_8c810d6a38625f12646c304135f2425c = L.circleMarker(
+                [-16.365769, -71.5243462],
+                {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_b7b96481f6c67fade995f8703dd43a35);
+        
+    
+        var popup_a89e62cbaeb4475a79978d8794a1ae4d = L.popup({
+  "maxWidth": 460,
+});
+
+        
+            
+                var html_8d01f29c0dc0801111d0081842f03942 = $(`<div id="html_8d01f29c0dc0801111d0081842f03942" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-75854</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-16.365769</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.5243462</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Francisco Mostajo / Calle Mariano Melgar</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_a89e62cbaeb4475a79978d8794a1ae4d.setContent(html_8d01f29c0dc0801111d0081842f03942);
+            
+        
+
+        circle_marker_8c810d6a38625f12646c304135f2425c.bindPopup(popup_a89e62cbaeb4475a79978d8794a1ae4d)
+        ;
+
+        
+    
+    
+            var circle_marker_454c6cac6a5b5fd9d4e47a949fb6cb45 = L.circleMarker(
+                [-16.3618294, -71.5171805],
+                {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_b7b96481f6c67fade995f8703dd43a35);
+        
+    
+        var popup_3f6705e0d2698ef7cbb71bcd3a124bf4 = L.popup({
+  "maxWidth": 460,
+});
+
+        
+            
+                var html_058976c1a17c16500aa9a6ae1e8650bf = $(`<div id="html_058976c1a17c16500aa9a6ae1e8650bf" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-75870</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-16.3618294</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.5171805</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Francisco Mostajo / Pasaje Sanchez Cerro</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_3f6705e0d2698ef7cbb71bcd3a124bf4.setContent(html_058976c1a17c16500aa9a6ae1e8650bf);
+            
+        
+
+        circle_marker_454c6cac6a5b5fd9d4e47a949fb6cb45.bindPopup(popup_3f6705e0d2698ef7cbb71bcd3a124bf4)
+        ;
+
+        
+    
+    
+            feature_group_b7b96481f6c67fade995f8703dd43a35.addTo(map_4c272375130201a7fc2764e876ff07a5);
+        
+    
+            var feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var circle_marker_e9c198599955ea261b7f6079b316ccf4 = L.circleMarker(
+                [-16.365746, -71.524349],
+                {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6);
+        
+    
+        var popup_e0ad0ddddd6755a8103eee2e379d9a46 = L.popup({
+  "maxWidth": 480,
+});
+
+        
+            
+                var html_67f6e96083c6b7a7b87bfe12c5183626 = $(`<div id="html_67f6e96083c6b7a7b87bfe12c5183626" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-10-108</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>21/10/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>19:10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>CHOQUE FATAL</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. FRANSCISCO MOSTAJO/ CALLE MARIANO MELGAR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>CENTRO DE SALUD DE INDEPENDENCIA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-16.365746</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-71.524349</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>SIN OBSERVACIONES</td></tr></table></div></div>`)[0];
+                popup_e0ad0ddddd6755a8103eee2e379d9a46.setContent(html_67f6e96083c6b7a7b87bfe12c5183626);
+            
+        
+
+        circle_marker_e9c198599955ea261b7f6079b316ccf4.bindPopup(popup_e0ad0ddddd6755a8103eee2e379d9a46)
+        ;
+
+        
+    
+    
+            var circle_marker_2aea849624e6b96601f051393966b8f7 = L.circleMarker(
+                [-16.383402, -71.517994],
+                {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6);
+        
+    
+        var popup_74cd8becbd2e43dd63e2aaf6431b8890 = L.popup({
+  "maxWidth": 480,
+});
+
+        
+            
+                var html_f59252d04fc7d1adbcfcaa46cb6de3ed = $(`<div id="html_f59252d04fc7d1adbcfcaa46cb6de3ed" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-03-12</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/03/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>07:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ESPECIAL</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>COMPRIME CABEZA CONTRA POSTE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>ASOCIACION SAN HILARION MZ C LOTE 11 SELVA ALEGRE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>LOTE 11 DE LA MZ C</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-16.383402</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-71.517994</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>S/O</td></tr></table></div></div>`)[0];
+                popup_74cd8becbd2e43dd63e2aaf6431b8890.setContent(html_f59252d04fc7d1adbcfcaa46cb6de3ed);
+            
+        
+
+        circle_marker_2aea849624e6b96601f051393966b8f7.bindPopup(popup_74cd8becbd2e43dd63e2aaf6431b8890)
+        ;
+
+        
+    
+    
+            var circle_marker_380361029647d541f6f0fb835ddda6c9 = L.circleMarker(
+                [-16.362033, -71.517563],
+                {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6);
+        
+    
+        var popup_4ad3e59395f1b9cc9b43f27067c32308 = L.popup({
+  "maxWidth": 480,
+});
+
+        
+            
+                var html_9cfd9613b3e00811e81d58c473b678b1 = $(`<div id="html_9cfd9613b3e00811e81d58c473b678b1" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-06-54</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>24/06/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>18:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>ATROPELLO POR APLASTAMIENTO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. FRANCISCO MOSTAJO CUADRA 14 DEL PPJJ INDEPENDENCIA DEL DISTRITO DE ALTO SELVA ALEGRE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>SIN REFERENCIA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-16.362033</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-71.517563</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>EN INVESTIGACION</td></tr></table></div></div>`)[0];
+                popup_4ad3e59395f1b9cc9b43f27067c32308.setContent(html_9cfd9613b3e00811e81d58c473b678b1);
+            
+        
+
+        circle_marker_380361029647d541f6f0fb835ddda6c9.bindPopup(popup_4ad3e59395f1b9cc9b43f27067c32308)
+        ;
+
+        
+    
+    
+            var circle_marker_0761bc0bf3dbecc5e994491b74bbcbbd = L.circleMarker(
+                [-16.377715, -71.51412],
+                {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
+            ).addTo(feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6);
+        
+    
+        var popup_7800f1294da73de57cfdbc2735251a92 = L.popup({
+  "maxWidth": 480,
+});
+
+        
+            
+                var html_755c62e80c4f624451460871f91019a8 = $(`<div id="html_755c62e80c4f624451460871f91019a8" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-09-50</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>22/09/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>08:16</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>ATROPELLO CON CONSECUENCIA FATAL Y DAÑOS MATERIALES</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. BRASIL CUADRA 6 </td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-16.377715</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-71.51412</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>EN PROCESO DE INVESTIGACIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>NO CUENTA CON CAUSA ESPECIFICA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_7800f1294da73de57cfdbc2735251a92.setContent(html_755c62e80c4f624451460871f91019a8);
+            
+        
+
+        circle_marker_0761bc0bf3dbecc5e994491b74bbcbbd.bindPopup(popup_7800f1294da73de57cfdbc2735251a92)
+        ;
+
+        
+    
+    
+            feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6.addTo(map_4c272375130201a7fc2764e876ff07a5);
+        
+    
+            map_4c272375130201a7fc2764e876ff07a5.fitBounds(
+                [[-16.365769, -71.5243462], [-16.3618294, -71.5171805]],
+                {}
+            );
+        
+    
+            var layer_control_8d3be07db7ea080badea0d1f17d745e1_layers = {
+                base_layers : {
+                    "openstreetmap" : tile_layer_a2317202d187c94ec98c78d2cc426d3a,
+                },
+                overlays :  {
+                    "contorno" : feature_group_8c01c33cae3b5740581f1bd665a74f35,
+                    "intersecciones: buffers (50m)" : feature_group_75a04a04d67981119f084f23eb0902ba,
+                    "intersecciones: puntos" : feature_group_b7b96481f6c67fade995f8703dd43a35,
+                    "siniestros fatales" : feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6,
+                },
+            };
+            let layer_control_8d3be07db7ea080badea0d1f17d745e1 = L.control.layers(
+                layer_control_8d3be07db7ea080badea0d1f17d745e1_layers.base_layers,
+                layer_control_8d3be07db7ea080badea0d1f17d745e1_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": true,
+  "autoZIndex": true,
+}
+            ).addTo(map_4c272375130201a7fc2764e876ff07a5);
+
+        
+     
+        feature_group_b7b96481f6c67fade995f8703dd43a35.bringToFront();
+        feature_group_d129a1a3d81db4cf7c7e8adf6efce9a6.bringToFront();
+    
+</script>
+</html>
