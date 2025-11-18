@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_9f974752627214fd0f08f12614fe28c0 {
+                #map_24f55b801204f1fe13b3557d65b2c458 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,6 +56,38 @@
     
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        border: 1px solid #e5e7eb;
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display: flex; flex-direction: column; gap: 8px; min-width: 300px; max-width: 92vw;
+      }
+
+      .searchbar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .searchbar-title { font-weight: 700; font-size: 14px; color: #111827; }
+      .toggle-btn { border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; background: #111827; color: #fff; }
+      .tools-body { display: flex; flex-direction: column; gap: 8px; }
+
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input { border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1; }
+      .row-flex button, .col-flex button { border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer; }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line { background: rgba(17,24,39,0.85); color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+
+      .searchbar-wrap.collapsed { padding: 8px 10px; }
+      .searchbar-wrap.collapsed .tools-body { display: none; }
+
+      @media (max-width: 480px) {
+        .searchbar-wrap { right: 12px; bottom: 12px; min-width: 240px; }
+      }
     </style>
     
     
@@ -69,11 +101,11 @@
     </div>
     
     
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
@@ -83,17 +115,60 @@
             <span style="display:inline-block; width:14px; height:14px; background:#d90429; border-radius:50%;"></span>
             <span>Rojo: Siniestro fatal</span>
         </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+            <span style="display:inline-block; width:14px; height:14px; background:#f59e0b; border-radius:50%;"></span>
+            <span>Amarillo: Coincidencia de búsqueda</span>
+        </div>
     </div>
     
     
-            <div class="folium-map" id="map_9f974752627214fd0f08f12614fe28c0" ></div>
+            <div class="folium-map" id="map_24f55b801204f1fe13b3557d65b2c458" ></div>
         
+    
+      <div class="searchbar-wrap" id="zs_tools">
+        <div class="searchbar-header">
+          <div class="searchbar-title">Herramientas</div>
+          <button id="btn_toggle_box" class="toggle-btn" title="Mostrar/Ocultar">⯆ Ocultar</button>
+        </div>
+
+        <div class="tools-body">
+          <div class="col-flex">
+            <input id="q_name" type="text" placeholder="Buscar por nombre">
+            <input id="q_code" type="text" placeholder="Buscar por código">
+          </div>
+          <div class="row-flex">
+            <button id="btn_search" class="btn-dark">Buscar</button>
+            <button id="btn_clear" class="btn-gray">Limpiar</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+
+          <div class="col-flex" title="Coordenadas en grados decimales">
+            <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+            <div class="row-flex">
+              <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+              <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+              <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+            <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+          </div>
+        </div>
+      </div>
+    
 </body>
 <script>
     
     
-            var map_9f974752627214fd0f08f12614fe28c0 = L.map(
-                "map_9f974752627214fd0f08f12614fe28c0",
+            var map_24f55b801204f1fe13b3557d65b2c458 = L.map(
+                "map_24f55b801204f1fe13b3557d65b2c458",
                 {
                     center: [-6.8549609, -79.90473526],
                     crs: L.CRS.EPSG3857,
@@ -105,13 +180,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_9f974752627214fd0f08f12614fe28c0);
+            L.control.scale().addTo(map_24f55b801204f1fe13b3557d65b2c458);
 
             
 
         
     
-            var tile_layer_adea25524a91d193f4cc95b9a6211b63 = L.tileLayer(
+            var tile_layer_bcfd3ebdac76fe8930859eee2b75167c = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -128,275 +203,523 @@
             );
         
     
-            tile_layer_adea25524a91d193f4cc95b9a6211b63.addTo(map_9f974752627214fd0f08f12614fe28c0);
+            tile_layer_bcfd3ebdac76fe8930859eee2b75167c.addTo(map_24f55b801204f1fe13b3557d65b2c458);
         
     
-            var feature_group_3b0d2e145f57bffc8b07fce63d3936b1 = L.featureGroup(
+            var feature_group_08afe6585fe362c8d49a851077181f89 = L.featureGroup(
                 {
 }
             );
         
     
-        function geo_json_8ad5162241f0e0361e174a7e85d03702_styler(feature) {
+        function geo_json_1bbef7258b07ae8d37863f0e414f5a4a_styler(feature) {
             switch(feature.properties.IDDPTO) {
                 default:
-                    return {"color": "#222222", "fill": true, "fillColor": "#FFA500", "fillOpacity": 0.6, "opacity": 1.0, "weight": 2.5};
+                    return {"color": "#222222", "fill": true, "fillColor": "#9ca3af", "fillOpacity": 0.3, "opacity": 1.0, "weight": 2.5};
             }
         }
 
-        function geo_json_8ad5162241f0e0361e174a7e85d03702_onEachFeature(feature, layer) {
+        function geo_json_1bbef7258b07ae8d37863f0e414f5a4a_onEachFeature(feature, layer) {
 
             layer.on({
             });
         };
-        var geo_json_8ad5162241f0e0361e174a7e85d03702 = L.geoJson(null, {
-                onEachFeature: geo_json_8ad5162241f0e0361e174a7e85d03702_onEachFeature,
+        var geo_json_1bbef7258b07ae8d37863f0e414f5a4a = L.geoJson(null, {
+                onEachFeature: geo_json_1bbef7258b07ae8d37863f0e414f5a4a_onEachFeature,
             
-                style: geo_json_8ad5162241f0e0361e174a7e85d03702_styler,
+                style: geo_json_1bbef7258b07ae8d37863f0e414f5a4a_styler,
             ...{
 }
         });
 
-        function geo_json_8ad5162241f0e0361e174a7e85d03702_add (data) {
-            geo_json_8ad5162241f0e0361e174a7e85d03702
+        function geo_json_1bbef7258b07ae8d37863f0e414f5a4a_add (data) {
+            geo_json_1bbef7258b07ae8d37863f0e414f5a4a
                 .addData(data);
         }
-            geo_json_8ad5162241f0e0361e174a7e85d03702_add({"features": [{"geometry": {"coordinates": [[[[-79.89154298899996, -6.850554724999938], [-79.89002148899993, -6.851265599999977], [-79.88799223899997, -6.851062474999935], [-79.886369114, -6.851976599999887], [-79.88403511399997, -6.851367224999933], [-79.88306786399994, -6.85142097499994], [-79.88298423899994, -6.851601099999925], [-79.8823149889999, -6.853385724999953], [-79.88290998899993, -6.855170474999852], [-79.88395086399998, -6.856731974999889], [-79.8846946139999, -6.857773099999974], [-79.88580998899988, -6.858219224999971], [-79.88633048899999, -6.858367974999908], [-79.88714848899997, -6.857773099999974], [-79.88789211399995, -6.856583349999937], [-79.88848698899989, -6.855096099999912], [-79.88878448899999, -6.854203724999877], [-79.88960248899997, -6.853608849999944], [-79.89086648899996, -6.853683224999884], [-79.89168448899994, -6.854278099999931], [-79.89235373899999, -6.856062724999958], [-79.89274411399998, -6.857056599999964], [-79.89298636399991, -6.857089849999966], [-79.89306248899999, -6.857115224999973], [-79.89313673899994, -6.85715034999987], [-79.89334961399999, -6.857275349999838], [-79.89343948899995, -6.857337849999965], [-79.8935078639999, -6.857417974999976], [-79.89353323899996, -6.857498099999873], [-79.89360936399999, -6.857525349999889], [-79.89372073899995, -6.857540974999949], [-79.89385936399987, -6.857558599999891], [-79.89415823899998, -6.857554724999943], [-79.89448436399988, -6.857560599999886], [-79.89470111399999, -6.857568349999895], [-79.89486323899996, -6.857583974999955], [-79.89502348899998, -6.857609349999962], [-79.89523636399991, -6.857652349999967], [-79.89589261399988, -6.85782622499994], [-79.89647073899994, -6.858126974999948], [-79.89658598899996, -6.858197224999969], [-79.8967636139999, -6.858367224999938], [-79.89700386399988, -6.858624974999941], [-79.89750386399999, -6.859197224999946], [-79.89866986399988, -6.860591849999878], [-79.89897073899994, -6.860976599999901], [-79.89907611399991, -6.861136724999938], [-79.89914061399992, -6.861253724999926], [-79.8991798639999, -6.86135347499993], [-79.8992851139999, -6.861693349999882], [-79.89933198899996, -6.861792974999958], [-79.89939261399991, -6.861882849999859], [-79.89949998899993, -6.86199809999988], [-79.89975198899998, -6.862257849999878], [-79.90027148899998, -6.862703099999976], [-79.90209498899998, -6.865729724999937], [-79.90358223899989, -6.867960474999904], [-79.90469773899991, -6.870488724999859], [-79.90603623899995, -6.873463224999966], [-79.90730036399998, -6.876214599999969], [-79.90774648899992, -6.877478724999833], [-79.90733211399993, -6.878179724999939], [-79.9023906139999, -6.883990224999934], [-79.90096486399989, -6.885443349999889], [-79.90001361399999, -6.886447224999927], [-79.89693548899999, -6.889589849999936], [-79.89498236399999, -6.89143947499997], [-79.89216798899997, -6.894529349999914], [-79.89010348899996, -6.896615224999948], [-79.88752148899994, -6.899089849999939], [-79.88393748899995, -6.902783224999894], [-79.88217973899998, -6.904503849999912], [-79.87927536399997, -6.907123099999978], [-79.87751761399988, -6.908427724999967], [-79.87845311399997, -6.909558599999968], [-79.87934761399998, -6.91178122499997], [-79.88056248899994, -6.913087849999954], [-79.88086136399988, -6.913638724999885], [-79.88074611399998, -6.914119099999937], [-79.88016211399997, -6.914478474999896], [-79.88015036399997, -6.914486474999933], [-79.87941598899994, -6.914945349999925], [-79.87860986299995, -6.91591722499993], [-79.87963086399998, -6.917162099999928], [-79.8818106139999, -6.915419974999907], [-79.88284373899995, -6.914603474999979], [-79.88344123899992, -6.914130849999935], [-79.88589861399993, -6.912525349999953], [-79.89009573899995, -6.909488224999961], [-79.89147461399989, -6.908189474999972], [-79.89337886399989, -6.90663872499988], [-79.89744723899997, -6.90372659999997], [-79.8990253639999, -6.903095724999844], [-79.90087298899994, -6.902169974999879], [-79.90218948899997, -6.901140599999962], [-79.90319536399994, -6.900509724999949], [-79.90416411399991, -6.900142599999924], [-79.90593948899993, -6.899249974999975], [-79.90783398899998, -6.897853474999977], [-79.91103323899995, -6.896023474999879], [-79.91280073899998, -6.894507849999911], [-79.91452348899998, -6.89330072499996], [-79.91511323899994, -6.89265034999994], [-79.91613086399991, -6.890843724999968], [-79.91634173899996, -6.889876974999822], [-79.91699611399991, -6.888566224999977], [-79.91939261399995, -6.885831974999974], [-79.92040823899998, -6.884912099999895], [-79.92159573899988, -6.88356634999991], [-79.92320311399993, -6.881290974999956], [-79.92538861399993, -6.879206974999931], [-79.92656636399994, -6.878404349999926], [-79.92888861399996, -6.876275349999901], [-79.9297832389999, -6.875624974999937], [-79.93044923899998, -6.874650349999911], [-79.93126561399993, -6.873947349999924], [-79.93156836399993, -6.873611349999919], [-79.93040423899998, -6.87327734999991], [-79.92903323899998, -6.87309759999988], [-79.92772273899999, -6.872740224999973], [-79.92617386399996, -6.872353474999954], [-79.92500973899996, -6.871787099999892], [-79.92349023899999, -6.870951224999942], [-79.92214848899988, -6.869968724999978], [-79.92113673899996, -6.869162099999869], [-79.92024223899989, -6.868120974999954], [-79.91919923899997, -6.866929724999977], [-79.91821486399994, -6.865796724999939], [-79.91711336399993, -6.864634724999974], [-79.91627923899995, -6.863711099999932], [-79.91529486399992, -6.862488224999936], [-79.91422261399993, -6.861445349999883], [-79.91326761399995, -6.860708974999966], [-79.90847461399994, -6.857664099999852], [-79.90733786399989, -6.856796849999967], [-79.90653323899994, -6.856111349999878], [-79.90537298899994, -6.854267599999844], [-79.90453711399994, -6.853667974999951], [-79.9034941139999, -6.852445349999869], [-79.9026601139999, -6.851224599999966], [-79.90200386399988, -6.850240224999936], [-79.90093161399989, -6.849197224999955], [-79.90016598899996, -6.849134724999942], [-79.89803511399987, -6.848728474999916], [-79.89631048899997, -6.849744099999953], [-79.89438286399991, -6.850150349999979], [-79.89154298899996, -6.850554724999938]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "SANTA ROSA", "CODCCPP": "0001", "DEPARTAMEN": "LAMBAYEQUE", "DISTRITO": "SANTA ROSA", "FUENTE": "INEI", "IDDIST": "140114", "IDDPTO": "14", "IDPROV": "1401", "PROVINCIA": "CHICLAYO"}, "type": "Feature"}], "type": "FeatureCollection"});
+            geo_json_1bbef7258b07ae8d37863f0e414f5a4a_add({"features": [{"geometry": {"coordinates": [[[[-79.89154298899996, -6.850554724999938], [-79.89002148899993, -6.851265599999977], [-79.88799223899997, -6.851062474999935], [-79.886369114, -6.851976599999887], [-79.88403511399997, -6.851367224999933], [-79.88306786399994, -6.85142097499994], [-79.88298423899994, -6.851601099999925], [-79.8823149889999, -6.853385724999953], [-79.88290998899993, -6.855170474999852], [-79.88395086399998, -6.856731974999889], [-79.8846946139999, -6.857773099999974], [-79.88580998899988, -6.858219224999971], [-79.88633048899999, -6.858367974999908], [-79.88714848899997, -6.857773099999974], [-79.88789211399995, -6.856583349999937], [-79.88848698899989, -6.855096099999912], [-79.88878448899999, -6.854203724999877], [-79.88960248899997, -6.853608849999944], [-79.89086648899996, -6.853683224999884], [-79.89168448899994, -6.854278099999931], [-79.89235373899999, -6.856062724999958], [-79.89274411399998, -6.857056599999964], [-79.89298636399991, -6.857089849999966], [-79.89306248899999, -6.857115224999973], [-79.89313673899994, -6.85715034999987], [-79.89334961399999, -6.857275349999838], [-79.89343948899995, -6.857337849999965], [-79.8935078639999, -6.857417974999976], [-79.89353323899996, -6.857498099999873], [-79.89360936399999, -6.857525349999889], [-79.89372073899995, -6.857540974999949], [-79.89385936399987, -6.857558599999891], [-79.89415823899998, -6.857554724999943], [-79.89448436399988, -6.857560599999886], [-79.89470111399999, -6.857568349999895], [-79.89486323899996, -6.857583974999955], [-79.89502348899998, -6.857609349999962], [-79.89523636399991, -6.857652349999967], [-79.89589261399988, -6.85782622499994], [-79.89647073899994, -6.858126974999948], [-79.89658598899996, -6.858197224999969], [-79.8967636139999, -6.858367224999938], [-79.89700386399988, -6.858624974999941], [-79.89750386399999, -6.859197224999946], [-79.89866986399988, -6.860591849999878], [-79.89897073899994, -6.860976599999901], [-79.89907611399991, -6.861136724999938], [-79.89914061399992, -6.861253724999926], [-79.8991798639999, -6.86135347499993], [-79.8992851139999, -6.861693349999882], [-79.89933198899996, -6.861792974999958], [-79.89939261399991, -6.861882849999859], [-79.89949998899993, -6.86199809999988], [-79.89975198899998, -6.862257849999878], [-79.90027148899998, -6.862703099999976], [-79.90209498899998, -6.865729724999937], [-79.90358223899989, -6.867960474999904], [-79.90469773899991, -6.870488724999859], [-79.90603623899995, -6.873463224999966], [-79.90730036399998, -6.876214599999969], [-79.90774648899992, -6.877478724999833], [-79.90733211399993, -6.878179724999939], [-79.9023906139999, -6.883990224999934], [-79.90096486399989, -6.885443349999889], [-79.90001361399999, -6.886447224999927], [-79.89693548899999, -6.889589849999936], [-79.89498236399999, -6.89143947499997], [-79.89216798899997, -6.894529349999914], [-79.89010348899996, -6.896615224999948], [-79.88752148899994, -6.899089849999939], [-79.88393748899995, -6.902783224999894], [-79.88217973899998, -6.904503849999912], [-79.87927536399997, -6.907123099999978], [-79.87751761399988, -6.908427724999967], [-79.87845311399997, -6.909558599999968], [-79.87934761399998, -6.91178122499997], [-79.88056248899994, -6.913087849999954], [-79.88086136399988, -6.913638724999885], [-79.88074611399998, -6.914119099999937], [-79.88016211399997, -6.914478474999896], [-79.88015036399997, -6.914486474999933], [-79.87941598899994, -6.914945349999925], [-79.87860986299995, -6.91591722499993], [-79.87963086399998, -6.917162099999928], [-79.8818106139999, -6.915419974999907], [-79.88284373899995, -6.914603474999979], [-79.88344123899992, -6.914130849999935], [-79.88589861399993, -6.912525349999953], [-79.89009573899995, -6.909488224999961], [-79.89147461399989, -6.908189474999972], [-79.89337886399989, -6.90663872499988], [-79.89744723899997, -6.90372659999997], [-79.8990253639999, -6.903095724999844], [-79.90087298899994, -6.902169974999879], [-79.90218948899997, -6.901140599999962], [-79.90319536399994, -6.900509724999949], [-79.90416411399991, -6.900142599999924], [-79.90593948899993, -6.899249974999975], [-79.90783398899998, -6.897853474999977], [-79.91103323899995, -6.896023474999879], [-79.91280073899998, -6.894507849999911], [-79.91452348899998, -6.89330072499996], [-79.91511323899994, -6.89265034999994], [-79.91613086399991, -6.890843724999968], [-79.91634173899996, -6.889876974999822], [-79.91699611399991, -6.888566224999977], [-79.91939261399995, -6.885831974999974], [-79.92040823899998, -6.884912099999895], [-79.92159573899988, -6.88356634999991], [-79.92320311399993, -6.881290974999956], [-79.92538861399993, -6.879206974999931], [-79.92656636399994, -6.878404349999926], [-79.92888861399996, -6.876275349999901], [-79.9297832389999, -6.875624974999937], [-79.93044923899998, -6.874650349999911], [-79.93126561399993, -6.873947349999924], [-79.93156836399993, -6.873611349999919], [-79.93040423899998, -6.87327734999991], [-79.92903323899998, -6.87309759999988], [-79.92772273899999, -6.872740224999973], [-79.92617386399996, -6.872353474999954], [-79.92500973899996, -6.871787099999892], [-79.92349023899999, -6.870951224999942], [-79.92214848899988, -6.869968724999978], [-79.92113673899996, -6.869162099999869], [-79.92024223899989, -6.868120974999954], [-79.91919923899997, -6.866929724999977], [-79.91821486399994, -6.865796724999939], [-79.91711336399993, -6.864634724999974], [-79.91627923899995, -6.863711099999932], [-79.91529486399992, -6.862488224999936], [-79.91422261399993, -6.861445349999883], [-79.91326761399995, -6.860708974999966], [-79.90847461399994, -6.857664099999852], [-79.90733786399989, -6.856796849999967], [-79.90653323899994, -6.856111349999878], [-79.90537298899994, -6.854267599999844], [-79.90453711399994, -6.853667974999951], [-79.9034941139999, -6.852445349999869], [-79.9026601139999, -6.851224599999966], [-79.90200386399988, -6.850240224999936], [-79.90093161399989, -6.849197224999955], [-79.90016598899996, -6.849134724999942], [-79.89803511399987, -6.848728474999916], [-79.89631048899997, -6.849744099999953], [-79.89438286399991, -6.850150349999979], [-79.89154298899996, -6.850554724999938]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "SANTA ROSA", "CODCCPP": "0001", "DEPARTAMEN": "LAMBAYEQUE", "DISTRITO": "SANTA ROSA", "FUENTE": "INEI", "IDDIST": "140114", "IDDPTO": "14", "IDPROV": "1401", "PROVINCIA": "CHICLAYO"}, "type": "Feature"}], "type": "FeatureCollection"});
 
         
     
-            geo_json_8ad5162241f0e0361e174a7e85d03702.addTo(feature_group_3b0d2e145f57bffc8b07fce63d3936b1);
+            geo_json_1bbef7258b07ae8d37863f0e414f5a4a.addTo(feature_group_08afe6585fe362c8d49a851077181f89);
         
     
-            feature_group_3b0d2e145f57bffc8b07fce63d3936b1.addTo(map_9f974752627214fd0f08f12614fe28c0);
+            feature_group_08afe6585fe362c8d49a851077181f89.addTo(map_24f55b801204f1fe13b3557d65b2c458);
         
     
-            var feature_group_69ae166a6e1f40b971284f520e6ba0a9 = L.featureGroup(
+            var feature_group_d4fb9e2c8c45ab030c2b0e0617f209da = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_7073ca1b1af74d0ad23a47b0711e5bb3 = L.circle(
+            var circle_0e1c2ad44c83a33bc0ae33abc01fa33f = L.circle(
                 [-6.8550842, -79.9047245],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_69ae166a6e1f40b971284f520e6ba0a9);
+            ).addTo(feature_group_d4fb9e2c8c45ab030c2b0e0617f209da);
         
     
-            var circle_b2f538cb1b3ef57f6fbdb3731223699c = L.circle(
+            var circle_68dab968c18a14218d1fe6ad634fb5fc = L.circle(
                 [-6.8547551, -79.9045545],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_69ae166a6e1f40b971284f520e6ba0a9);
+            ).addTo(feature_group_d4fb9e2c8c45ab030c2b0e0617f209da);
         
     
-            var circle_f3d8da7e9419d24b14d6c4b96dce7539 = L.circle(
+            var circle_882faa4dfdef1662e25919d312e85ad2 = L.circle(
                 [-6.8550803, -79.9047276],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_69ae166a6e1f40b971284f520e6ba0a9);
+            ).addTo(feature_group_d4fb9e2c8c45ab030c2b0e0617f209da);
         
     
-            var circle_a69339d8356469c5cebee2a6c7d47102 = L.circle(
+            var circle_5d49605cea06e02e28cee4b8ad74fe0a = L.circle(
                 [-6.8549405, -79.9048364],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_69ae166a6e1f40b971284f520e6ba0a9);
+            ).addTo(feature_group_d4fb9e2c8c45ab030c2b0e0617f209da);
         
     
-            var circle_61237b918109be6c4bdb48e05e183016 = L.circle(
+            var circle_07848549a73652a9642400930b9f783e = L.circle(
                 [-6.8549444, -79.9048333],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_69ae166a6e1f40b971284f520e6ba0a9);
+            ).addTo(feature_group_d4fb9e2c8c45ab030c2b0e0617f209da);
         
     
-            feature_group_69ae166a6e1f40b971284f520e6ba0a9.addTo(map_9f974752627214fd0f08f12614fe28c0);
+            feature_group_d4fb9e2c8c45ab030c2b0e0617f209da.addTo(map_24f55b801204f1fe13b3557d65b2c458);
         
     
-            var feature_group_98d32d10a22c861387dd284389e04c58 = L.featureGroup(
+            var feature_group_3988aaf3f4702737df3170a840a9edfb = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_897f07152459d48abba77eb60f5c55ab = L.circleMarker(
+            var circle_marker_1be64766361cded711c24a9cfc7dd118 = L.circleMarker(
                 [-6.8550842, -79.9047245],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_98d32d10a22c861387dd284389e04c58);
+            ).addTo(feature_group_3988aaf3f4702737df3170a840a9edfb);
         
     
-        var popup_efd79d3948854b4c58dd2ddd4f70b731 = L.popup({
+        var popup_a4d9911e053410cf4774be921c88570a = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_20be8d66ce5ca82333a065999be5acef = $(`<div id="html_20be8d66ce5ca82333a065999be5acef" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-724982</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8550842</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9047245</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_efd79d3948854b4c58dd2ddd4f70b731.setContent(html_20be8d66ce5ca82333a065999be5acef);
+                var html_422446e3553b335184a3805e85007401 = $(`<div id="html_422446e3553b335184a3805e85007401" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-724982</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8550842</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9047245</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_a4d9911e053410cf4774be921c88570a.setContent(html_422446e3553b335184a3805e85007401);
             
         
 
-        circle_marker_897f07152459d48abba77eb60f5c55ab.bindPopup(popup_efd79d3948854b4c58dd2ddd4f70b731)
+        circle_marker_1be64766361cded711c24a9cfc7dd118.bindPopup(popup_a4d9911e053410cf4774be921c88570a)
         ;
 
         
     
     
-            var circle_marker_26fad46f625e12aee14929fe977c4e5c = L.circleMarker(
+            circle_marker_1be64766361cded711c24a9cfc7dd118.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_3ab195d4dbbe815b49f8b259c43facb7 = L.circleMarker(
                 [-6.8547551, -79.9045545],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_98d32d10a22c861387dd284389e04c58);
+            ).addTo(feature_group_3988aaf3f4702737df3170a840a9edfb);
         
     
-        var popup_2b43a956f98014d7009c83d0ff4977b5 = L.popup({
+        var popup_f39ed53458510aec2abc4430415b0d1f = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_b7adad7bca956bb7ca6da8317472980c = $(`<div id="html_b7adad7bca956bb7ca6da8317472980c" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-732072</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8547551</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9045545</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>LA-781</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_2b43a956f98014d7009c83d0ff4977b5.setContent(html_b7adad7bca956bb7ca6da8317472980c);
+                var html_6bd9cec3efb491dc2bc8408e14eb8d63 = $(`<div id="html_6bd9cec3efb491dc2bc8408e14eb8d63" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-732072</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8547551</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9045545</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>LA-781</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_f39ed53458510aec2abc4430415b0d1f.setContent(html_6bd9cec3efb491dc2bc8408e14eb8d63);
             
         
 
-        circle_marker_26fad46f625e12aee14929fe977c4e5c.bindPopup(popup_2b43a956f98014d7009c83d0ff4977b5)
+        circle_marker_3ab195d4dbbe815b49f8b259c43facb7.bindPopup(popup_f39ed53458510aec2abc4430415b0d1f)
         ;
 
         
     
     
-            var circle_marker_18f5dd8d159827bf6de6b062126da3ee = L.circleMarker(
+            circle_marker_3ab195d4dbbe815b49f8b259c43facb7.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_7ec1d1829352e6c01fab54bc6869d992 = L.circleMarker(
                 [-6.8550803, -79.9047276],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_98d32d10a22c861387dd284389e04c58);
+            ).addTo(feature_group_3988aaf3f4702737df3170a840a9edfb);
         
     
-        var popup_a2c03c7db07008326949598a077a9164 = L.popup({
+        var popup_94c9d6d7e6c957f24826d30a947b73c8 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_b32df9d34486992b98cf9837d1a2ae91 = $(`<div id="html_b32df9d34486992b98cf9837d1a2ae91" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-812112</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8550803</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9047276</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_a2c03c7db07008326949598a077a9164.setContent(html_b32df9d34486992b98cf9837d1a2ae91);
+                var html_9addbd8c26a42636b3d7f21adc5cafa7 = $(`<div id="html_9addbd8c26a42636b3d7f21adc5cafa7" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-812112</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8550803</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9047276</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_94c9d6d7e6c957f24826d30a947b73c8.setContent(html_9addbd8c26a42636b3d7f21adc5cafa7);
             
         
 
-        circle_marker_18f5dd8d159827bf6de6b062126da3ee.bindPopup(popup_a2c03c7db07008326949598a077a9164)
+        circle_marker_7ec1d1829352e6c01fab54bc6869d992.bindPopup(popup_94c9d6d7e6c957f24826d30a947b73c8)
         ;
 
         
     
     
-            var circle_marker_834e8230ac38cd1dfcbb7b78b512dfec = L.circleMarker(
+            circle_marker_7ec1d1829352e6c01fab54bc6869d992.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_abbf2895397e4a2062203d2585760f76 = L.circleMarker(
                 [-6.8549405, -79.9048364],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_98d32d10a22c861387dd284389e04c58);
+            ).addTo(feature_group_3988aaf3f4702737df3170a840a9edfb);
         
     
-        var popup_dd62b236cd19f97dad1e6be6ce399e69 = L.popup({
+        var popup_ca1db6d3db3b5e7008f65f012ef3815c = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_b5ffaf93a640d599f2b6daaaea927ddc = $(`<div id="html_b5ffaf93a640d599f2b6daaaea927ddc" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-822962</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8549405</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9048364</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>LA-781</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_dd62b236cd19f97dad1e6be6ce399e69.setContent(html_b5ffaf93a640d599f2b6daaaea927ddc);
+                var html_84162da4e892bfee304964895e8d2a6a = $(`<div id="html_84162da4e892bfee304964895e8d2a6a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-822962</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8549405</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9048364</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>LA-781</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_ca1db6d3db3b5e7008f65f012ef3815c.setContent(html_84162da4e892bfee304964895e8d2a6a);
             
         
 
-        circle_marker_834e8230ac38cd1dfcbb7b78b512dfec.bindPopup(popup_dd62b236cd19f97dad1e6be6ce399e69)
+        circle_marker_abbf2895397e4a2062203d2585760f76.bindPopup(popup_ca1db6d3db3b5e7008f65f012ef3815c)
         ;
 
         
     
     
-            var circle_marker_0e1def274593ed749e675d7f3479a802 = L.circleMarker(
+            circle_marker_abbf2895397e4a2062203d2585760f76.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_158bb9a7f5343462abec1ad32a9d24d0 = L.circleMarker(
                 [-6.8549444, -79.9048333],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_98d32d10a22c861387dd284389e04c58);
+            ).addTo(feature_group_3988aaf3f4702737df3170a840a9edfb);
         
     
-        var popup_e5c7879a42041c93e9f084836320fb2d = L.popup({
+        var popup_18a4f4e2b3c380d1fd9107704b113227 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_76145262b1f139c3ce110a690e5d981a = $(`<div id="html_76145262b1f139c3ce110a690e5d981a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-822963</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8549444</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9048333</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_e5c7879a42041c93e9f084836320fb2d.setContent(html_76145262b1f139c3ce110a690e5d981a);
+                var html_ff9a0fcb0145d4f0947d01d98b7b7527 = $(`<div id="html_ff9a0fcb0145d4f0947d01d98b7b7527" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-822963</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-6.8549444</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.9048333</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_18a4f4e2b3c380d1fd9107704b113227.setContent(html_ff9a0fcb0145d4f0947d01d98b7b7527);
             
         
 
-        circle_marker_0e1def274593ed749e675d7f3479a802.bindPopup(popup_e5c7879a42041c93e9f084836320fb2d)
+        circle_marker_158bb9a7f5343462abec1ad32a9d24d0.bindPopup(popup_18a4f4e2b3c380d1fd9107704b113227)
         ;
 
         
     
     
-            feature_group_98d32d10a22c861387dd284389e04c58.addTo(map_9f974752627214fd0f08f12614fe28c0);
+            circle_marker_158bb9a7f5343462abec1ad32a9d24d0.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
         
     
-            var feature_group_8d0cde9d0b2af8317b86aff02029fffd = L.featureGroup(
+            feature_group_3988aaf3f4702737df3170a840a9edfb.addTo(map_24f55b801204f1fe13b3557d65b2c458);
+        
+    
+            var feature_group_96950149ffbcfc7e411d992e88178339 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_816067766c1ef3f68bf71dc8ec669e1a = L.circleMarker(
+            var circle_marker_f2a91b01462d012f7189cf8f2ffb84aa = L.circleMarker(
                 [-6.855076, -79.904741],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8d0cde9d0b2af8317b86aff02029fffd);
+            ).addTo(feature_group_96950149ffbcfc7e411d992e88178339);
         
     
-        var popup_1040a72867167870741a8d95be160190 = L.popup({
+        var popup_a47384df4de2429914c9e984f2c10939 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_819e3054d9ba023f29320e2c8384c953 = $(`<div id="html_819e3054d9ba023f29320e2c8384c953" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-02-185</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>23/02/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>08:35</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>DESPISTE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA SANTA ROSA CENTRO POBLADO LAGUNA CHICA KM. 10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-6.855076</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.904741</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>ACCIDENTE EN INVESTIGACION</td></tr></table></div></div>`)[0];
-                popup_1040a72867167870741a8d95be160190.setContent(html_819e3054d9ba023f29320e2c8384c953);
+                var html_845069f05f454bcb434621a56f785604 = $(`<div id="html_845069f05f454bcb434621a56f785604" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-02-185</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>23/02/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>08:35</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>DESPISTE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA SANTA ROSA CENTRO POBLADO LAGUNA CHICA KM. 10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-6.855076</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.904741</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>ACCIDENTE EN INVESTIGACION</td></tr></table></div></div>`)[0];
+                popup_a47384df4de2429914c9e984f2c10939.setContent(html_845069f05f454bcb434621a56f785604);
             
         
 
-        circle_marker_816067766c1ef3f68bf71dc8ec669e1a.bindPopup(popup_1040a72867167870741a8d95be160190)
+        circle_marker_f2a91b01462d012f7189cf8f2ffb84aa.bindPopup(popup_a47384df4de2429914c9e984f2c10939)
         ;
 
         
     
     
-            feature_group_8d0cde9d0b2af8317b86aff02029fffd.addTo(map_9f974752627214fd0f08f12614fe28c0);
+            feature_group_96950149ffbcfc7e411d992e88178339.addTo(map_24f55b801204f1fe13b3557d65b2c458);
         
     
-            map_9f974752627214fd0f08f12614fe28c0.fitBounds(
+            map_24f55b801204f1fe13b3557d65b2c458.fitBounds(
                 [[-6.8550842, -79.9047245], [-6.8547551, -79.9045545], [-6.8550803, -79.9047276], [-6.8549405, -79.9048364], [-6.8549444, -79.9048333]],
                 {}
             );
         
     
-            var layer_control_1e663109e97a10c294e9b4cf9ff74c14_layers = {
+            var layer_control_880115c2a5d5c4708a528f98e24c60de_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_adea25524a91d193f4cc95b9a6211b63,
+                    "openstreetmap" : tile_layer_bcfd3ebdac76fe8930859eee2b75167c,
                 },
                 overlays :  {
-                    "contorno" : feature_group_3b0d2e145f57bffc8b07fce63d3936b1,
-                    "intersecciones: buffers (50m)" : feature_group_69ae166a6e1f40b971284f520e6ba0a9,
-                    "intersecciones: puntos" : feature_group_98d32d10a22c861387dd284389e04c58,
-                    "siniestros fatales" : feature_group_8d0cde9d0b2af8317b86aff02029fffd,
+                    "contorno" : feature_group_08afe6585fe362c8d49a851077181f89,
+                    "intersecciones: buffers (50m)" : feature_group_d4fb9e2c8c45ab030c2b0e0617f209da,
+                    "intersecciones: puntos" : feature_group_3988aaf3f4702737df3170a840a9edfb,
+                    "siniestros fatales" : feature_group_96950149ffbcfc7e411d992e88178339,
                 },
             };
-            let layer_control_1e663109e97a10c294e9b4cf9ff74c14 = L.control.layers(
-                layer_control_1e663109e97a10c294e9b4cf9ff74c14_layers.base_layers,
-                layer_control_1e663109e97a10c294e9b4cf9ff74c14_layers.overlays,
+            let layer_control_880115c2a5d5c4708a528f98e24c60de = L.control.layers(
+                layer_control_880115c2a5d5c4708a528f98e24c60de_layers.base_layers,
+                layer_control_880115c2a5d5c4708a528f98e24c60de_layers.overlays,
                 {
   "position": "topright",
   "collapsed": true,
   "autoZIndex": true,
 }
-            ).addTo(map_9f974752627214fd0f08f12614fe28c0);
+            ).addTo(map_24f55b801204f1fe13b3557d65b2c458);
 
         
-     
-        feature_group_98d32d10a22c861387dd284389e04c58.bringToFront();
-        feature_group_8d0cde9d0b2af8317b86aff02029fffd.bringToFront();
+    
+        feature_group_3988aaf3f4702737df3170a840a9edfb.bringToFront();
+        feature_group_96950149ffbcfc7e411d992e88178339.bringToFront();
+    
+    
+      (function() {
+        var puntosLayer = feature_group_3988aaf3f4702737df3170a840a9edfb;
+        var defaultColor = '#1d4ed8';
+        var hiliteColor  = '#f59e0b';
+
+        // ---------- Toggle colapsar/expandir ----------
+        var box = document.getElementById('zs_tools');
+        var btnToggle = document.getElementById('btn_toggle_box');
+        var saved = null;
+        try { saved = localStorage.getItem('zs_tools_collapsed'); } catch(e) {}
+        if (saved === '1') {
+          box.classList.add('collapsed');
+          btnToggle.textContent = '⯈ Mostrar';
+        }
+        function toggleBox() {
+          var collapsed = box.classList.toggle('collapsed');
+          btnToggle.textContent = collapsed ? '⯈ Mostrar' : '⯆ Ocultar';
+          try { localStorage.setItem('zs_tools_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+        btnToggle.addEventListener('click', toggleBox);
+
+        // ---------- Esperar a que el mapa esté disponible ----------
+        var ly_map = null;
+        function ensureMap(cb) {
+          var tries = 0;
+          (function wait() {
+            ly_map = (puntosLayer && puntosLayer._map) ? puntosLayer._map : null;
+            if (ly_map) { cb(); return; }
+            if (tries++ < 80) { setTimeout(wait, 50); }
+          })();
+        }
+
+        ensureMap(function initTools() {
+          // ---------- Utilidades ----------
+          function eachMarker(fn) {
+            if (!puntosLayer || !puntosLayer._layers) return;
+            Object.values(puntosLayer._layers).forEach(function(ly) {
+              if (ly && typeof ly.setStyle === 'function') fn(ly);
+            });
+          }
+
+          function getTooltipText(ly) {
+            try {
+              var t = ly.getTooltip();
+              return t ? String(t.getContent() || '').toLowerCase() : '';
+            } catch(e) { return ''; }
+          }
+
+          function clearHighlights() {
+            eachMarker(function(ly) {
+              ly.setStyle({ color: defaultColor, fillColor: defaultColor });
+            });
+          }
+
+          // ---------- Búsqueda ----------
+          function searchAndHighlight() {
+            var qn_raw = (document.getElementById('q_name').value || '');
+            var qc_raw = (document.getElementById('q_code').value || '');
+            var qn = qn_raw.toLowerCase();
+            var qc = qc_raw.toLowerCase();
+
+            var useName = qn_raw.trim().length > 0;
+            var useCode = qc_raw.trim().length > 0;
+
+            clearHighlights();
+            if (!useName && !useCode) return;
+
+            var matchedLatLngs = [];
+            eachMarker(function(ly) {
+              var txt = getTooltipText(ly); // "nombre | codigo"
+              var parts = txt.split('|', 2);
+              var nameTxt = (parts[0] || '').trim();
+              var codeTxt = (parts[1] || '').trim();
+
+              var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+              var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+              if (matchName || matchCode) {
+                ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+                if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+              }
+            });
+
+            if (matchedLatLngs.length > 0) {
+              var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+              try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+            }
+          }
+
+          document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+          document.getElementById('btn_clear').addEventListener('click', function() {
+            document.getElementById('q_name').value = '';
+            document.getElementById('q_code').value = '';
+            clearHighlights();
+          });
+          ['q_name','q_code'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+          });
+
+          // ---------- Pin por coordenadas ----------
+          var coordLayer = L.layerGroup().addTo(ly_map);
+          function goToXY() {
+            var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+            var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+            if (!isFinite(x) || !isFinite(y)) return;
+            coordLayer.clearLayers();
+            var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+            mk.addTo(coordLayer);
+            ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+          }
+          function clearXY() { coordLayer.clearLayers(); }
+          document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+          document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+          // ---------- Medición ----------
+          var measuring = false;
+          var mA = null, mB = null, mLine = null;
+
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2-lat1) * Math.PI/180;
+            var dLon = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2)*Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
+
+          function updateMeasure() {
+            if (!(mA && mB)) return;
+            var a = mA.getLatLng(), b = mB.getLatLng();
+            var d = haversine(a.lat, a.lng, b.lat, b.lng);
+            var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+            if (!mLine) {
+              mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+                .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+                .addTo(ly_map);
+            } else {
+              mLine.setLatLngs([a, b]);
+              mLine.setTooltipContent(txt);
+            }
+          }
+
+          function clearMeasure() {
+            if (mA) ly_map.removeLayer(mA); mA = null;
+            if (mB) ly_map.removeLayer(mB); mB = null;
+            if (mLine) ly_map.removeLayer(mLine); mLine = null;
+          }
+
+          function toggleMeasure() {
+            measuring = !measuring;
+            var stateSpan = document.getElementById('measure_state');
+            stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+            stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+            if (!measuring) {
+              clearMeasure();
+              ly_map.getContainer().style.cursor = '';
+              return;
+            }
+            ly_map.getContainer().style.cursor = 'crosshair';
+          }
+
+          document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+          ly_map.on('click', function(ev) {
+            if (!measuring) return;
+            if (!mA) {
+              mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+              mA.on('drag', updateMeasure);
+            } else if (!mB) {
+              mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+              mB.on('drag', updateMeasure);
+            } else {
+              mB.setLatLng(ev.latlng);
+            }
+            updateMeasure();
+          });
+
+          // ---------- Abrir vista actual en Google Maps ----------
+          function openInGoogleMaps() {
+            var c = ly_map.getCenter();
+            var z = ly_map.getZoom();
+            var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+            window.open(url, '_blank');
+          }
+          document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+        });
+      })();
     
 </script>
 </html>

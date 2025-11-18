@@ -15,7 +15,18 @@
       .container { max-width:1100px; margin:0 auto; padding:24px 16px; }
       h1 { margin-top:8px; font-size: clamp(22px, 3.2vw, 34px); }
       p  { font-size: clamp(14px, 2vw, 16px); line-height:1.6; }
-      .hero { width:100%; max-height:420px; object-fit:cover; border-radius:14px; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
+
+      /* >>> Parche hero sin recorte <<< */
+      .hero {
+        display:block;
+        width:100%;
+        height:auto;
+        max-height:80vh;
+        border-radius:14px;
+        box-shadow:0 6px 16px rgba(0,0,0,0.08);
+        object-fit:contain;
+      }
+
       .buttons { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 6px; }
       .btn {
         display:inline-block; padding:12px 16px; border-radius:12px;
@@ -38,7 +49,10 @@
       }
       .card h3 { margin:4px 0 10px; font-size:18px; }
       .card .row { display:flex; gap:10px; }
-      .card a, .card span.btn-like { flex:1; text-align:center; font-weight:600; padding:10px; border-radius:10px; text-decoration:none; display:inline-block; }
+      .card a, .card span.btn-like {
+        flex:1; text-align:center; font-weight:600; padding:10px;
+        border-radius:10px; text-decoration:none; display:inline-block;
+      }
       .dl { background:var(--dark); color:#fff; }
       .map { background:#ffffff; color:var(--blue); border:1px solid var(--blue); }
       .btn-like { background:#e5e7eb; color:#6b7280; border:1px solid #e5e7eb; }
@@ -50,6 +64,30 @@
       }
       .muted { color:#6b7280; font-size:13px; margin-top:4px; }
       footer { padding:18px; text-align:center; color:#6b7280; font-size:13px; }
+
+      /* ----- Barra de filtros ----- */
+      .filters {
+        display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+        background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.06); margin:12px 0;
+      }
+      .filters label { font-size:13px; color:#374151; }
+      .filters input {
+        flex: 1 1 200px;
+        border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; font-size:14px;
+      }
+      .filters .actions { display:flex; gap:8px; margin-left:auto; }
+      .filters .actions button {
+        border:0; border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer;
+      }
+      .filters .actions .primary { background: var(--dark); color:#fff; }
+      .filters .actions .accent  { background: var(--blue); color:#fff; }
+      .filters .actions .secondary { background:#e5e7eb; color:#111827; }
+
+      @media (max-width: 700px) {
+        .filters { gap:10px; }
+        .filters .actions { width:100%; justify-content:flex-end; flex-wrap:wrap; }
+      }
       @media (max-width: 480px) {
         .logo { height:40px; top:10px; }
       }
@@ -68,9 +106,112 @@
       <div class="container">
         <p>Se ha priorizado las siguientes municipalidades y zonas escolares en función a los registros de zonas escolares con bajo nivel de seguridad vial en el aplicativo Entornos Seguros, en base a la siniestralidad fatal que tiene registrado el ONSV y en base de la cantidad de estudiantes que reporta ESCALE-MINEDU.</p>
         <div style="margin:14px 0 18px;"><img class="hero" src="../assets/img/zonas.jpg" alt="zonas"></div>
+
+        
+    <div class="filters">
+      <label>Departamento</label>
+      <input id="f_dep" type="text" placeholder="Ejem: Lima">
+      <label>Provincia</label>
+      <input id="f_prov" type="text" placeholder="Ejem: Lima">
+      <label>Distrito</label>
+      <input id="f_dist" type="text" placeholder="Ejem: San Juan de Lurigancho">
+      <label>UBIGEO</label>
+      <input id="f_ubi" type="text" placeholder="Ejem: 060101">
+
+      <div class="actions">
+        <button id="f_apply" class="primary">Buscar</button>
+        <button id="f_top" class="accent">Traer coincidencias arriba</button>
+        <button id="f_clear" class="secondary">Limpiar</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        function norm(s){
+          return (s || '').toLowerCase().replace(/\s+|_/g, '');
+        }
+        function getCards(){
+          var grid = document.querySelector('.grid');
+          return grid ? Array.from(grid.querySelectorAll('.card')) : [];
+        }
+        function ensureNormalizedAttrs(card){
+          ['data-dep','data-prov','data-dist','data-ubi'].forEach(function(attr){
+            var v = card.getAttribute(attr) || '';
+            card.setAttribute(attr, norm(v));
+          });
+        }
+        function matchCard(card, q){
+          var d = card.getAttribute('data-dep')  || '';
+          var p = card.getAttribute('data-prov') || '';
+          var t = card.getAttribute('data-dist') || '';
+          var u = card.getAttribute('data-ubi')  || '';
+          var ok = true;
+          if(q.dep  && d.indexOf(q.dep)  === -1) ok = false;
+          if(q.prov && p.indexOf(q.prov) === -1) ok = false;
+          if(q.dist && t.indexOf(q.dist) === -1) ok = false;
+          if(q.ubi  && u.indexOf(q.ubi)  === -1) ok = false;
+          return ok;
+        }
+        function queryValues(){
+          var dep  = document.getElementById('f_dep');
+          var prov = document.getElementById('f_prov');
+          var dist = document.getElementById('f_dist');
+          var ubi  = document.getElementById('f_ubi');
+          return { dep: norm(dep.value), prov: norm(prov.value), dist: norm(dist.value), ubi: norm(ubi.value) };
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+          var applyBtn = document.getElementById('f_apply');
+          var topBtn   = document.getElementById('f_top');
+          var clearBtn = document.getElementById('f_clear');
+
+          function applyHide(){
+            var q = queryValues();
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            cards.forEach(function(card){
+              card.style.display = matchCard(card, q) ? '' : 'none';
+            });
+          }
+
+          function bringTop(){
+            var q = queryValues();
+            var grid = document.querySelector('.grid');
+            if(!grid) return;
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            var matches = [], rest = [];
+            cards.forEach(function(card){
+              (matchCard(card, q) ? matches : rest).push(card);
+              card.style.display = ''; // mostrar todos, solo reordenar
+            });
+            matches.concat(rest).forEach(function(card){ grid.appendChild(card); });
+          }
+
+          function clearAll(){
+            var dep  = document.getElementById('f_dep');
+            var prov = document.getElementById('f_prov');
+            var dist = document.getElementById('f_dist');
+            var ubi  = document.getElementById('f_ubi');
+            dep.value = prov.value = dist.value = ubi.value = '';
+            getCards().forEach(function(card){ card.style.display = ''; });
+          }
+
+          applyBtn.addEventListener('click', applyHide);
+          topBtn.addEventListener('click', bringTop);
+          clearBtn.addEventListener('click', clearAll);
+
+          ['f_dep','f_prov','f_dist','f_ubi'].forEach(function(id){
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') applyHide(); });
+          });
+        });
+      })();
+    </script>
+    
+
         <div class="grid">
           
-          <div class="card">
+          <div class="card" data-dep="AMAZONAS" data-prov="CHACHAPOYAS" data-dist="CHACHAPOYAS" data-ubi="010101">
             <h3>AMAZONAS - CHACHAPOYAS - CHACHAPOYAS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AMAZONAS-CHACHAPOYAS-CHACHAPOYAS.xlsx" download>Descargar Excel</a>
@@ -80,7 +221,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="CARHUAZ" data-dist="CARHUAZ" data-ubi="020601">
             <h3>ANCASH - CARHUAZ - CARHUAZ</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ANCASH-CARHUAZ-CARHUAZ.xlsx" download>Descargar Excel</a>
@@ -90,7 +231,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="HUARAZ" data-dist="INDEPENDENCIA" data-ubi="020105">
             <h3>ANCASH - HUARAZ - INDEPENDENCIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ANCASH-HUARAZ-INDEPENDENCIA.xlsx" download>Descargar Excel</a>
@@ -100,7 +241,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="POMABAMBA" data-dist="POMABAMBA" data-ubi="021601">
             <h3>ANCASH - POMABAMBA - POMABAMBA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ANCASH-POMABAMBA-POMABAMBA.xlsx" download>Descargar Excel</a>
@@ -110,7 +251,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="SANTA" data-dist="CHIMBOTE" data-ubi="021801">
             <h3>ANCASH - SANTA - CHIMBOTE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ANCASH-SANTA-CHIMBOTE.xlsx" download>Descargar Excel</a>
@@ -120,7 +261,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="SANTA" data-dist="NUEVO_CHIMBOTE" data-ubi="021809">
             <h3>ANCASH - SANTA - NUEVO_CHIMBOTE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ANCASH-SANTA-NUEVO_CHIMBOTE.xlsx" download>Descargar Excel</a>
@@ -130,7 +271,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="APURIMAC" data-prov="ABANCAY" data-dist="ABANCAY" data-ubi="030101">
             <h3>APURIMAC - ABANCAY - ABANCAY</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/APURIMAC-ABANCAY-ABANCAY.xlsx" download>Descargar Excel</a>
@@ -140,7 +281,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="APURIMAC" data-prov="CHINCHEROS" data-dist="CHINCHEROS" data-ubi="030601">
             <h3>APURIMAC - CHINCHEROS - CHINCHEROS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/APURIMAC-CHINCHEROS-CHINCHEROS.xlsx" download>Descargar Excel</a>
@@ -150,7 +291,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="ALTO_SELVA_ALEGRE" data-ubi="040102">
             <h3>AREQUIPA - AREQUIPA - ALTO_SELVA_ALEGRE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-ALTO_SELVA_ALEGRE.xlsx" download>Descargar Excel</a>
@@ -160,7 +301,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="AREQUIPA" data-ubi="040101">
             <h3>AREQUIPA - AREQUIPA - AREQUIPA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-AREQUIPA.xlsx" download>Descargar Excel</a>
@@ -170,7 +311,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="CAYMA" data-ubi="040103">
             <h3>AREQUIPA - AREQUIPA - CAYMA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-CAYMA.xlsx" download>Descargar Excel</a>
@@ -180,7 +321,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="CERRO_COLORADO" data-ubi="040104">
             <h3>AREQUIPA - AREQUIPA - CERRO_COLORADO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-CERRO_COLORADO.xlsx" download>Descargar Excel</a>
@@ -190,7 +331,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="JACOBO_HUNTER" data-ubi="040107">
             <h3>AREQUIPA - AREQUIPA - JACOBO_HUNTER</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-JACOBO_HUNTER.xlsx" download>Descargar Excel</a>
@@ -200,7 +341,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="JOSE_LUIS_BUSTAMANTE_Y_RIVERO" data-ubi="040129">
             <h3>AREQUIPA - AREQUIPA - JOSE_LUIS_BUSTAMANTE_Y_RIVERO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-JOSE_LUIS_BUSTAMANTE_Y_RIVERO.xlsx" download>Descargar Excel</a>
@@ -210,7 +351,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="LA_JOYA" data-ubi="040108">
             <h3>AREQUIPA - AREQUIPA - LA_JOYA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-LA_JOYA.xlsx" download>Descargar Excel</a>
@@ -220,7 +361,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="MARIANO_MELGAR" data-ubi="040109">
             <h3>AREQUIPA - AREQUIPA - MARIANO_MELGAR</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-MARIANO_MELGAR.xlsx" download>Descargar Excel</a>
@@ -230,7 +371,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="MIRAFLORES" data-ubi="040110">
             <h3>AREQUIPA - AREQUIPA - MIRAFLORES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-MIRAFLORES.xlsx" download>Descargar Excel</a>
@@ -240,7 +381,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="PAUCARPATA" data-ubi="040112">
             <h3>AREQUIPA - AREQUIPA - PAUCARPATA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-PAUCARPATA.xlsx" download>Descargar Excel</a>
@@ -250,7 +391,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="SOCABAYA" data-ubi="040122">
             <h3>AREQUIPA - AREQUIPA - SOCABAYA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-SOCABAYA.xlsx" download>Descargar Excel</a>
@@ -260,7 +401,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="YANAHUARA" data-ubi="040126">
             <h3>AREQUIPA - AREQUIPA - YANAHUARA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-YANAHUARA.xlsx" download>Descargar Excel</a>
@@ -270,7 +411,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="YURA" data-ubi="040128">
             <h3>AREQUIPA - AREQUIPA - YURA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-AREQUIPA-YURA.xlsx" download>Descargar Excel</a>
@@ -280,7 +421,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="CAYLLOMA" data-dist="MAJES" data-ubi="040520">
             <h3>AREQUIPA - CAYLLOMA - MAJES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AREQUIPA-CAYLLOMA-MAJES.xlsx" download>Descargar Excel</a>
@@ -290,7 +431,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUAMANGA" data-dist="AYACUCHO" data-ubi="050101">
             <h3>AYACUCHO - HUAMANGA - AYACUCHO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AYACUCHO-HUAMANGA-AYACUCHO.xlsx" download>Descargar Excel</a>
@@ -300,7 +441,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUAMANGA" data-dist="CARMEN_ALTO" data-ubi="050104">
             <h3>AYACUCHO - HUAMANGA - CARMEN_ALTO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AYACUCHO-HUAMANGA-CARMEN_ALTO.xlsx" download>Descargar Excel</a>
@@ -310,7 +451,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUAMANGA" data-dist="SAN_JUAN_BAUTISTA" data-ubi="050110">
             <h3>AYACUCHO - HUAMANGA - SAN_JUAN_BAUTISTA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AYACUCHO-HUAMANGA-SAN_JUAN_BAUTISTA.xlsx" download>Descargar Excel</a>
@@ -320,7 +461,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUANTA" data-dist="HUANTA" data-ubi="050401">
             <h3>AYACUCHO - HUANTA - HUANTA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/AYACUCHO-HUANTA-HUANTA.xlsx" download>Descargar Excel</a>
@@ -330,7 +471,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CAJAMARCA" data-dist="CAJAMARCA" data-ubi="060101">
             <h3>CAJAMARCA - CAJAMARCA - CAJAMARCA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CAJAMARCA-CAJAMARCA.xlsx" download>Descargar Excel</a>
@@ -340,7 +481,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CAJAMARCA" data-dist="LOS_BAÑOS_DEL_INCA" data-ubi="060108">
             <h3>CAJAMARCA - CAJAMARCA - LOS_BAÑOS_DEL_INCA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CAJAMARCA-LOS_BAÑOS_DEL_INCA.xlsx" download>Descargar Excel</a>
@@ -350,7 +491,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CELENDIN" data-dist="CELENDIN" data-ubi="060301">
             <h3>CAJAMARCA - CELENDIN - CELENDIN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CELENDIN-CELENDIN.xlsx" download>Descargar Excel</a>
@@ -360,7 +501,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CHOTA" data-dist="CHOTA" data-ubi="060401">
             <h3>CAJAMARCA - CHOTA - CHOTA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CHOTA-CHOTA.xlsx" download>Descargar Excel</a>
@@ -370,7 +511,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CONTUMAZA" data-dist="CONTUMAZA" data-ubi="060501">
             <h3>CAJAMARCA - CONTUMAZA - CONTUMAZA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CONTUMAZA-CONTUMAZA.xlsx" download>Descargar Excel</a>
@@ -380,7 +521,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CUTERVO" data-dist="CUTERVO" data-ubi="060601">
             <h3>CAJAMARCA - CUTERVO - CUTERVO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-CUTERVO-CUTERVO.xlsx" download>Descargar Excel</a>
@@ -390,7 +531,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="JAEN" data-dist="JAEN" data-ubi="060801">
             <h3>CAJAMARCA - JAEN - JAEN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-JAEN-JAEN.xlsx" download>Descargar Excel</a>
@@ -400,7 +541,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="SAN_IGNACIO" data-dist="SAN_IGNACIO" data-ubi="060901">
             <h3>CAJAMARCA - SAN_IGNACIO - SAN_IGNACIO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-SAN_IGNACIO-SAN_IGNACIO.xlsx" download>Descargar Excel</a>
@@ -410,7 +551,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="SAN_MARCOS" data-dist="PEDRO_GALVEZ" data-ubi="061001">
             <h3>CAJAMARCA - SAN_MARCOS - PEDRO_GALVEZ</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-SAN_MARCOS-PEDRO_GALVEZ.xlsx" download>Descargar Excel</a>
@@ -420,7 +561,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="SAN_MIGUEL" data-dist="SAN_MIGUEL" data-ubi="061101">
             <h3>CAJAMARCA - SAN_MIGUEL - SAN_MIGUEL</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CAJAMARCA-SAN_MIGUEL-SAN_MIGUEL.xlsx" download>Descargar Excel</a>
@@ -430,7 +571,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="BELLAVISTA" data-ubi="070102">
             <h3>CALLAO - CALLAO - BELLAVISTA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CALLAO-CALLAO-BELLAVISTA.xlsx" download>Descargar Excel</a>
@@ -440,7 +581,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="CALLAO" data-ubi="070101">
             <h3>CALLAO - CALLAO - CALLAO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CALLAO-CALLAO-CALLAO.xlsx" download>Descargar Excel</a>
@@ -450,7 +591,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="CARMEN_DE_LA_LEGUA_REYNOSO" data-ubi="070103">
             <h3>CALLAO - CALLAO - CARMEN_DE_LA_LEGUA_REYNOSO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CALLAO-CALLAO-CARMEN_DE_LA_LEGUA_REYNOSO.xlsx" download>Descargar Excel</a>
@@ -460,7 +601,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="MI_PERU" data-ubi="070107">
             <h3>CALLAO - CALLAO - MI_PERU</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CALLAO-CALLAO-MI_PERU.xlsx" download>Descargar Excel</a>
@@ -470,7 +611,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="VENTANILLA" data-ubi="070106">
             <h3>CALLAO - CALLAO - VENTANILLA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CALLAO-CALLAO-VENTANILLA.xlsx" download>Descargar Excel</a>
@@ -480,7 +621,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CANCHIS" data-dist="SICUANI" data-ubi="080601">
             <h3>CUSCO - CANCHIS - SICUANI</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CANCHIS-SICUANI.xlsx" download>Descargar Excel</a>
@@ -490,7 +631,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CUSCO" data-dist="CUSCO" data-ubi="080101">
             <h3>CUSCO - CUSCO - CUSCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CUSCO-CUSCO.xlsx" download>Descargar Excel</a>
@@ -500,7 +641,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CUSCO" data-dist="SANTIAGO" data-ubi="080106">
             <h3>CUSCO - CUSCO - SANTIAGO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CUSCO-SANTIAGO.xlsx" download>Descargar Excel</a>
@@ -510,7 +651,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CUSCO" data-dist="SAN_JERONIMO" data-ubi="080104">
             <h3>CUSCO - CUSCO - SAN_JERONIMO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CUSCO-SAN_JERONIMO.xlsx" download>Descargar Excel</a>
@@ -520,7 +661,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CUSCO" data-dist="SAN_SEBASTIAN" data-ubi="080105">
             <h3>CUSCO - CUSCO - SAN_SEBASTIAN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CUSCO-SAN_SEBASTIAN.xlsx" download>Descargar Excel</a>
@@ -530,7 +671,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="CUSCO" data-dist="WANCHAQ" data-ubi="080108">
             <h3>CUSCO - CUSCO - WANCHAQ</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-CUSCO-WANCHAQ.xlsx" download>Descargar Excel</a>
@@ -540,7 +681,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="ESPINAR" data-dist="ESPINAR" data-ubi="080801">
             <h3>CUSCO - ESPINAR - ESPINAR</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-ESPINAR-ESPINAR.xlsx" download>Descargar Excel</a>
@@ -550,7 +691,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="LA_CONVENCION" data-dist="SANTA_ANA" data-ubi="080901">
             <h3>CUSCO - LA_CONVENCION - SANTA_ANA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-LA_CONVENCION-SANTA_ANA.xlsx" download>Descargar Excel</a>
@@ -560,7 +701,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CUSCO" data-prov="PAUCARTAMBO" data-dist="PAUCARTAMBO" data-ubi="081101">
             <h3>CUSCO - PAUCARTAMBO - PAUCARTAMBO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/CUSCO-PAUCARTAMBO-PAUCARTAMBO.xlsx" download>Descargar Excel</a>
@@ -570,7 +711,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANCAVELICA" data-prov="HUANCAVELICA" data-dist="ASCENSION" data-ubi="090118">
             <h3>HUANCAVELICA - HUANCAVELICA - ASCENSION</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/HUANCAVELICA-HUANCAVELICA-ASCENSION.xlsx" download>Descargar Excel</a>
@@ -580,7 +721,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANCAVELICA" data-prov="HUANCAVELICA" data-dist="HUANCAVELICA" data-ubi="090101">
             <h3>HUANCAVELICA - HUANCAVELICA - HUANCAVELICA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/HUANCAVELICA-HUANCAVELICA-HUANCAVELICA.xlsx" download>Descargar Excel</a>
@@ -590,7 +731,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANUCO" data-prov="HUANUCO" data-dist="HUANUCO" data-ubi="100101">
             <h3>HUANUCO - HUANUCO - HUANUCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/HUANUCO-HUANUCO-HUANUCO.xlsx" download>Descargar Excel</a>
@@ -600,7 +741,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANUCO" data-prov="LEONCIO_PRADO" data-dist="JOSE_CRESPO_Y_CASTILLO" data-ubi="100604">
             <h3>HUANUCO - LEONCIO_PRADO - JOSE_CRESPO_Y_CASTILLO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/HUANUCO-LEONCIO_PRADO-JOSE_CRESPO_Y_CASTILLO.xlsx" download>Descargar Excel</a>
@@ -610,7 +751,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANUCO" data-prov="LEONCIO_PRADO" data-dist="RUPA" data-ubi="100601">
             <h3>HUANUCO - LEONCIO_PRADO - RUPA-RUPA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/HUANUCO-LEONCIO_PRADO-RUPA-RUPA.xlsx" download>Descargar Excel</a>
@@ -620,7 +761,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="CHINCHA" data-dist="PUEBLO_NUEVO" data-ubi="110207">
             <h3>ICA - CHINCHA - PUEBLO_NUEVO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-CHINCHA-PUEBLO_NUEVO.xlsx" download>Descargar Excel</a>
@@ -630,7 +771,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="ICA" data-ubi="110101">
             <h3>ICA - ICA - ICA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-ICA-ICA.xlsx" download>Descargar Excel</a>
@@ -640,7 +781,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="LA_TINGUIÑA" data-ubi="110102">
             <h3>ICA - ICA - LA_TINGUIÑA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-ICA-LA_TINGUIÑA.xlsx" download>Descargar Excel</a>
@@ -650,7 +791,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="PARCONA" data-ubi="110106">
             <h3>ICA - ICA - PARCONA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-ICA-PARCONA.xlsx" download>Descargar Excel</a>
@@ -660,7 +801,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="SALAS" data-ubi="110108">
             <h3>ICA - ICA - SALAS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-ICA-SALAS.xlsx" download>Descargar Excel</a>
@@ -670,7 +811,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="SANTIAGO" data-ubi="110111">
             <h3>ICA - ICA - SANTIAGO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-ICA-SANTIAGO.xlsx" download>Descargar Excel</a>
@@ -680,7 +821,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="PISCO" data-dist="PISCO" data-ubi="110501">
             <h3>ICA - PISCO - PISCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-PISCO-PISCO.xlsx" download>Descargar Excel</a>
@@ -690,7 +831,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="PISCO" data-dist="SAN_ANDRES" data-ubi="110506">
             <h3>ICA - PISCO - SAN_ANDRES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-PISCO-SAN_ANDRES.xlsx" download>Descargar Excel</a>
@@ -700,7 +841,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="PISCO" data-dist="SAN_CLEMENTE" data-ubi="110507">
             <h3>ICA - PISCO - SAN_CLEMENTE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/ICA-PISCO-SAN_CLEMENTE.xlsx" download>Descargar Excel</a>
@@ -710,7 +851,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="CHANCHAMAYO" data-dist="CHANCHAMAYO" data-ubi="120301">
             <h3>JUNIN - CHANCHAMAYO - CHANCHAMAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-CHANCHAMAYO-CHANCHAMAYO.xlsx" download>Descargar Excel</a>
@@ -720,7 +861,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="CHUPACA" data-dist="CHUPACA" data-ubi="120901">
             <h3>JUNIN - CHUPACA - CHUPACA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-CHUPACA-CHUPACA.xlsx" download>Descargar Excel</a>
@@ -730,7 +871,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="HUANCAYO" data-dist="CHILCA" data-ubi="120107">
             <h3>JUNIN - HUANCAYO - CHILCA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-HUANCAYO-CHILCA.xlsx" download>Descargar Excel</a>
@@ -740,7 +881,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="HUANCAYO" data-dist="EL_TAMBO" data-ubi="120114">
             <h3>JUNIN - HUANCAYO - EL_TAMBO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-HUANCAYO-EL_TAMBO.xlsx" download>Descargar Excel</a>
@@ -750,7 +891,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="HUANCAYO" data-dist="HUANCAYO" data-ubi="120101">
             <h3>JUNIN - HUANCAYO - HUANCAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-HUANCAYO-HUANCAYO.xlsx" download>Descargar Excel</a>
@@ -760,7 +901,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="JAUJA" data-dist="JAUJA" data-ubi="120401">
             <h3>JUNIN - JAUJA - JAUJA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-JAUJA-JAUJA.xlsx" download>Descargar Excel</a>
@@ -770,7 +911,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="SATIPO" data-dist="PANGOA" data-ubi="120606">
             <h3>JUNIN - SATIPO - PANGOA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-SATIPO-PANGOA.xlsx" download>Descargar Excel</a>
@@ -780,7 +921,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="SATIPO" data-dist="SATIPO" data-ubi="120601">
             <h3>JUNIN - SATIPO - SATIPO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-SATIPO-SATIPO.xlsx" download>Descargar Excel</a>
@@ -790,7 +931,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="TARMA" data-dist="TARMA" data-ubi="120701">
             <h3>JUNIN - TARMA - TARMA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/JUNIN-TARMA-TARMA.xlsx" download>Descargar Excel</a>
@@ -800,7 +941,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="CAYALTI" data-ubi="140116">
             <h3>LAMBAYEQUE - CHICLAYO - CAYALTI</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-CHICLAYO-CAYALTI.xlsx" download>Descargar Excel</a>
@@ -810,7 +951,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="CHICLAYO" data-ubi="140101">
             <h3>LAMBAYEQUE - CHICLAYO - CHICLAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-CHICLAYO-CHICLAYO.xlsx" download>Descargar Excel</a>
@@ -820,7 +961,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="JOSE_LEONARDO_ORTIZ" data-ubi="140105">
             <h3>LAMBAYEQUE - CHICLAYO - JOSE_LEONARDO_ORTIZ</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-CHICLAYO-JOSE_LEONARDO_ORTIZ.xlsx" download>Descargar Excel</a>
@@ -830,7 +971,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="LA_VICTORIA" data-ubi="140106">
             <h3>LAMBAYEQUE - CHICLAYO - LA_VICTORIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-CHICLAYO-LA_VICTORIA.xlsx" download>Descargar Excel</a>
@@ -840,7 +981,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="POMALCA" data-ubi="140118">
             <h3>LAMBAYEQUE - CHICLAYO - POMALCA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-CHICLAYO-POMALCA.xlsx" download>Descargar Excel</a>
@@ -850,7 +991,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="FERREÑAFE" data-dist="FERREÑAFE" data-ubi="140201">
             <h3>LAMBAYEQUE - FERREÑAFE - FERREÑAFE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-FERREÑAFE-FERREÑAFE.xlsx" download>Descargar Excel</a>
@@ -860,7 +1001,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="LAMBAYEQUE" data-dist="LAMBAYEQUE" data-ubi="140301">
             <h3>LAMBAYEQUE - LAMBAYEQUE - LAMBAYEQUE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-LAMBAYEQUE-LAMBAYEQUE.xlsx" download>Descargar Excel</a>
@@ -870,7 +1011,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="LAMBAYEQUE" data-dist="MORROPE" data-ubi="140306">
             <h3>LAMBAYEQUE - LAMBAYEQUE - MORROPE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-LAMBAYEQUE-MORROPE.xlsx" download>Descargar Excel</a>
@@ -880,7 +1021,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="LAMBAYEQUE" data-dist="OLMOS" data-ubi="140308">
             <h3>LAMBAYEQUE - LAMBAYEQUE - OLMOS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LAMBAYEQUE-LAMBAYEQUE-OLMOS.xlsx" download>Descargar Excel</a>
@@ -890,7 +1031,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="ASCOPE" data-dist="SANTIAGO_DE_CAO" data-ubi="130207">
             <h3>LA_LIBERTAD - ASCOPE - SANTIAGO_DE_CAO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-ASCOPE-SANTIAGO_DE_CAO.xlsx" download>Descargar Excel</a>
@@ -900,7 +1041,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="CHEPEN" data-dist="CHEPEN" data-ubi="130401">
             <h3>LA_LIBERTAD - CHEPEN - CHEPEN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-CHEPEN-CHEPEN.xlsx" download>Descargar Excel</a>
@@ -910,7 +1051,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="CHEPEN" data-dist="PACANGA" data-ubi="130402">
             <h3>LA_LIBERTAD - CHEPEN - PACANGA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-CHEPEN-PACANGA.xlsx" download>Descargar Excel</a>
@@ -920,7 +1061,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="OTUZCO" data-dist="OTUZCO" data-ubi="130601">
             <h3>LA_LIBERTAD - OTUZCO - OTUZCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-OTUZCO-OTUZCO.xlsx" download>Descargar Excel</a>
@@ -930,7 +1071,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="PACASMAYO" data-dist="GUADALUPE" data-ubi="130702">
             <h3>LA_LIBERTAD - PACASMAYO - GUADALUPE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-PACASMAYO-GUADALUPE.xlsx" download>Descargar Excel</a>
@@ -940,7 +1081,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="PACASMAYO" data-dist="PACASMAYO" data-ubi="130704">
             <h3>LA_LIBERTAD - PACASMAYO - PACASMAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-PACASMAYO-PACASMAYO.xlsx" download>Descargar Excel</a>
@@ -950,7 +1091,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="PATAZ" data-dist="PATAZ" data-ubi="130809">
             <h3>LA_LIBERTAD - PATAZ - PATAZ</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-PATAZ-PATAZ.xlsx" download>Descargar Excel</a>
@@ -960,7 +1101,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="PATAZ" data-dist="TAYABAMBA" data-ubi="130801">
             <h3>LA_LIBERTAD - PATAZ - TAYABAMBA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-PATAZ-TAYABAMBA.xlsx" download>Descargar Excel</a>
@@ -970,7 +1111,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="SANCHEZ_CARRION" data-dist="HUAMACHUCO" data-ubi="130901">
             <h3>LA_LIBERTAD - SANCHEZ_CARRION - HUAMACHUCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-SANCHEZ_CARRION-HUAMACHUCO.xlsx" download>Descargar Excel</a>
@@ -980,7 +1121,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="EL_PORVENIR" data-ubi="130102">
             <h3>LA_LIBERTAD - TRUJILLO - EL_PORVENIR</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-EL_PORVENIR.xlsx" download>Descargar Excel</a>
@@ -990,7 +1131,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="FLORENCIA_DE_MORA" data-ubi="130103">
             <h3>LA_LIBERTAD - TRUJILLO - FLORENCIA_DE_MORA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-FLORENCIA_DE_MORA.xlsx" download>Descargar Excel</a>
@@ -1000,7 +1141,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="LAREDO" data-ubi="130106">
             <h3>LA_LIBERTAD - TRUJILLO - LAREDO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-LAREDO.xlsx" download>Descargar Excel</a>
@@ -1010,7 +1151,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="LA_ESPERANZA" data-ubi="130105">
             <h3>LA_LIBERTAD - TRUJILLO - LA_ESPERANZA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-LA_ESPERANZA.xlsx" download>Descargar Excel</a>
@@ -1020,7 +1161,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="MOCHE" data-ubi="130107">
             <h3>LA_LIBERTAD - TRUJILLO - MOCHE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-MOCHE.xlsx" download>Descargar Excel</a>
@@ -1030,7 +1171,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="SALAVERRY" data-ubi="130109">
             <h3>LA_LIBERTAD - TRUJILLO - SALAVERRY</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-SALAVERRY.xlsx" download>Descargar Excel</a>
@@ -1040,7 +1181,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="TRUJILLO" data-ubi="130101">
             <h3>LA_LIBERTAD - TRUJILLO - TRUJILLO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-TRUJILLO.xlsx" download>Descargar Excel</a>
@@ -1050,7 +1191,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="VICTOR_LARCO_HERRERA" data-ubi="130111">
             <h3>LA_LIBERTAD - TRUJILLO - VICTOR_LARCO_HERRERA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-TRUJILLO-VICTOR_LARCO_HERRERA.xlsx" download>Descargar Excel</a>
@@ -1060,7 +1201,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="VIRU" data-dist="CHAO" data-ubi="131202">
             <h3>LA_LIBERTAD - VIRU - CHAO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-VIRU-CHAO.xlsx" download>Descargar Excel</a>
@@ -1070,7 +1211,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="VIRU" data-dist="VIRU" data-ubi="131201">
             <h3>LA_LIBERTAD - VIRU - VIRU</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LA_LIBERTAD-VIRU-VIRU.xlsx" download>Descargar Excel</a>
@@ -1080,7 +1221,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="BARRANCA" data-dist="BARRANCA" data-ubi="150201">
             <h3>LIMA - BARRANCA - BARRANCA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-BARRANCA-BARRANCA.xlsx" download>Descargar Excel</a>
@@ -1090,7 +1231,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="BARRANCA" data-dist="SUPE" data-ubi="150204">
             <h3>LIMA - BARRANCA - SUPE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-BARRANCA-SUPE.xlsx" download>Descargar Excel</a>
@@ -1100,7 +1241,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="CAÑETE" data-dist="MALA" data-ubi="150509">
             <h3>LIMA - CAÑETE - MALA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-CAÑETE-MALA.xlsx" download>Descargar Excel</a>
@@ -1110,7 +1251,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="CAÑETE" data-dist="SAN_VICENTE_DE_CAÑETE" data-ubi="150501">
             <h3>LIMA - CAÑETE - SAN_VICENTE_DE_CAÑETE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-CAÑETE-SAN_VICENTE_DE_CAÑETE.xlsx" download>Descargar Excel</a>
@@ -1120,7 +1261,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUARAL" data-dist="CHANCAY" data-ubi="150605">
             <h3>LIMA - HUARAL - CHANCAY</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUARAL-CHANCAY.xlsx" download>Descargar Excel</a>
@@ -1130,7 +1271,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUARAL" data-dist="HUARAL" data-ubi="150601">
             <h3>LIMA - HUARAL - HUARAL</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUARAL-HUARAL.xlsx" download>Descargar Excel</a>
@@ -1140,7 +1281,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUAURA" data-dist="HUACHO" data-ubi="150801">
             <h3>LIMA - HUAURA - HUACHO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUAURA-HUACHO.xlsx" download>Descargar Excel</a>
@@ -1150,7 +1291,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUAURA" data-dist="HUALMAY" data-ubi="150805">
             <h3>LIMA - HUAURA - HUALMAY</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUAURA-HUALMAY.xlsx" download>Descargar Excel</a>
@@ -1160,7 +1301,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUAURA" data-dist="SANTA_MARIA" data-ubi="150810">
             <h3>LIMA - HUAURA - SANTA_MARIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUAURA-SANTA_MARIA.xlsx" download>Descargar Excel</a>
@@ -1170,7 +1311,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUAURA" data-dist="SAYAN" data-ubi="150811">
             <h3>LIMA - HUAURA - SAYAN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-HUAURA-SAYAN.xlsx" download>Descargar Excel</a>
@@ -1180,7 +1321,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="ATE" data-ubi="150103">
             <h3>LIMA - LIMA - ATE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-ATE.xlsx" download>Descargar Excel</a>
@@ -1190,7 +1331,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="BARRANCO" data-ubi="150104">
             <h3>LIMA - LIMA - BARRANCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-BARRANCO.xlsx" download>Descargar Excel</a>
@@ -1200,7 +1341,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="BREÑA" data-ubi="150105">
             <h3>LIMA - LIMA - BREÑA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-BREÑA.xlsx" download>Descargar Excel</a>
@@ -1210,7 +1351,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="CARABAYLLO" data-ubi="150106">
             <h3>LIMA - LIMA - CARABAYLLO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-CARABAYLLO.xlsx" download>Descargar Excel</a>
@@ -1220,7 +1361,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="CHACLACAYO" data-ubi="150107">
             <h3>LIMA - LIMA - CHACLACAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-CHACLACAYO.xlsx" download>Descargar Excel</a>
@@ -1230,7 +1371,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="CHORRILLOS" data-ubi="150108">
             <h3>LIMA - LIMA - CHORRILLOS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-CHORRILLOS.xlsx" download>Descargar Excel</a>
@@ -1240,7 +1381,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="COMAS" data-ubi="150110">
             <h3>LIMA - LIMA - COMAS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-COMAS.xlsx" download>Descargar Excel</a>
@@ -1250,7 +1391,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="EL_AGUSTINO" data-ubi="150111">
             <h3>LIMA - LIMA - EL_AGUSTINO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-EL_AGUSTINO.xlsx" download>Descargar Excel</a>
@@ -1260,7 +1401,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="INDEPENDENCIA" data-ubi="150112">
             <h3>LIMA - LIMA - INDEPENDENCIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-INDEPENDENCIA.xlsx" download>Descargar Excel</a>
@@ -1270,7 +1411,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="JESUS_MARIA" data-ubi="150113">
             <h3>LIMA - LIMA - JESUS_MARIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-JESUS_MARIA.xlsx" download>Descargar Excel</a>
@@ -1280,7 +1421,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LA_MOLINA" data-ubi="150114">
             <h3>LIMA - LIMA - LA_MOLINA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LA_MOLINA.xlsx" download>Descargar Excel</a>
@@ -1290,7 +1431,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LA_VICTORIA" data-ubi="150115">
             <h3>LIMA - LIMA - LA_VICTORIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LA_VICTORIA.xlsx" download>Descargar Excel</a>
@@ -1300,7 +1441,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LIMA" data-ubi="150101">
             <h3>LIMA - LIMA - LIMA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LIMA.xlsx" download>Descargar Excel</a>
@@ -1310,7 +1451,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LINCE" data-ubi="150116">
             <h3>LIMA - LIMA - LINCE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LINCE.xlsx" download>Descargar Excel</a>
@@ -1320,7 +1461,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LOS_OLIVOS" data-ubi="150117">
             <h3>LIMA - LIMA - LOS_OLIVOS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LOS_OLIVOS.xlsx" download>Descargar Excel</a>
@@ -1330,7 +1471,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LURIGANCHO" data-ubi="150118">
             <h3>LIMA - LIMA - LURIGANCHO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LURIGANCHO.xlsx" download>Descargar Excel</a>
@@ -1340,7 +1481,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LURIN" data-ubi="150119">
             <h3>LIMA - LIMA - LURIN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-LURIN.xlsx" download>Descargar Excel</a>
@@ -1350,7 +1491,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="MAGDALENA_DEL_MAR" data-ubi="150120">
             <h3>LIMA - LIMA - MAGDALENA_DEL_MAR</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-MAGDALENA_DEL_MAR.xlsx" download>Descargar Excel</a>
@@ -1360,7 +1501,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="PACHACAMAC" data-ubi="150123">
             <h3>LIMA - LIMA - PACHACAMAC</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-PACHACAMAC.xlsx" download>Descargar Excel</a>
@@ -1370,7 +1511,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="PUEBLO_LIBRE" data-ubi="150121">
             <h3>LIMA - LIMA - PUEBLO_LIBRE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-PUEBLO_LIBRE.xlsx" download>Descargar Excel</a>
@@ -1380,7 +1521,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="PUENTE_PIEDRA" data-ubi="150125">
             <h3>LIMA - LIMA - PUENTE_PIEDRA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-PUENTE_PIEDRA.xlsx" download>Descargar Excel</a>
@@ -1390,7 +1531,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="PUNTA_HERMOSA" data-ubi="150126">
             <h3>LIMA - LIMA - PUNTA_HERMOSA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-PUNTA_HERMOSA.xlsx" download>Descargar Excel</a>
@@ -1400,7 +1541,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="RIMAC" data-ubi="150128">
             <h3>LIMA - LIMA - RIMAC</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-RIMAC.xlsx" download>Descargar Excel</a>
@@ -1410,7 +1551,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SANTA_ANITA" data-ubi="150137">
             <h3>LIMA - LIMA - SANTA_ANITA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SANTA_ANITA.xlsx" download>Descargar Excel</a>
@@ -1420,7 +1561,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SANTIAGO_DE_SURCO" data-ubi="150140">
             <h3>LIMA - LIMA - SANTIAGO_DE_SURCO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SANTIAGO_DE_SURCO.xlsx" download>Descargar Excel</a>
@@ -1430,7 +1571,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_BORJA" data-ubi="150130">
             <h3>LIMA - LIMA - SAN_BORJA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_BORJA.xlsx" download>Descargar Excel</a>
@@ -1440,7 +1581,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_JUAN_DE_LURIGANCHO" data-ubi="150132">
             <h3>LIMA - LIMA - SAN_JUAN_DE_LURIGANCHO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_JUAN_DE_LURIGANCHO.xlsx" download>Descargar Excel</a>
@@ -1450,7 +1591,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_JUAN_DE_MIRAFLORES" data-ubi="150133">
             <h3>LIMA - LIMA - SAN_JUAN_DE_MIRAFLORES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_JUAN_DE_MIRAFLORES.xlsx" download>Descargar Excel</a>
@@ -1460,7 +1601,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_LUIS" data-ubi="150134">
             <h3>LIMA - LIMA - SAN_LUIS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_LUIS.xlsx" download>Descargar Excel</a>
@@ -1470,7 +1611,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_MARTIN_DE_PORRES" data-ubi="150135">
             <h3>LIMA - LIMA - SAN_MARTIN_DE_PORRES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_MARTIN_DE_PORRES.xlsx" download>Descargar Excel</a>
@@ -1480,7 +1621,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SAN_MIGUEL" data-ubi="150136">
             <h3>LIMA - LIMA - SAN_MIGUEL</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SAN_MIGUEL.xlsx" download>Descargar Excel</a>
@@ -1490,7 +1631,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="SURQUILLO" data-ubi="150141">
             <h3>LIMA - LIMA - SURQUILLO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-SURQUILLO.xlsx" download>Descargar Excel</a>
@@ -1500,7 +1641,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="VILLA_EL_SALVADOR" data-ubi="150142">
             <h3>LIMA - LIMA - VILLA_EL_SALVADOR</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-VILLA_EL_SALVADOR.xlsx" download>Descargar Excel</a>
@@ -1510,7 +1651,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="VILLA_MARIA_DEL_TRIUNFO" data-ubi="150143">
             <h3>LIMA - LIMA - VILLA_MARIA_DEL_TRIUNFO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LIMA-LIMA-VILLA_MARIA_DEL_TRIUNFO.xlsx" download>Descargar Excel</a>
@@ -1520,7 +1661,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="MAYNAS" data-dist="BELEN" data-ubi="160112">
             <h3>LORETO - MAYNAS - BELEN</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-MAYNAS-BELEN.xlsx" download>Descargar Excel</a>
@@ -1530,7 +1671,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="MAYNAS" data-dist="IQUITOS" data-ubi="160101">
             <h3>LORETO - MAYNAS - IQUITOS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-MAYNAS-IQUITOS.xlsx" download>Descargar Excel</a>
@@ -1540,7 +1681,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="MAYNAS" data-dist="PUNCHANA" data-ubi="160108">
             <h3>LORETO - MAYNAS - PUNCHANA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-MAYNAS-PUNCHANA.xlsx" download>Descargar Excel</a>
@@ -1550,7 +1691,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="MAYNAS" data-dist="SAN_JUAN_BAUTISTA" data-ubi="160113">
             <h3>LORETO - MAYNAS - SAN_JUAN_BAUTISTA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-MAYNAS-SAN_JUAN_BAUTISTA.xlsx" download>Descargar Excel</a>
@@ -1560,7 +1701,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="REQUENA" data-dist="REQUENA" data-ubi="160501">
             <h3>LORETO - REQUENA - REQUENA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-REQUENA-REQUENA.xlsx" download>Descargar Excel</a>
@@ -1570,7 +1711,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="UCAYALI" data-dist="CONTAMANA" data-ubi="160601">
             <h3>LORETO - UCAYALI - CONTAMANA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/LORETO-UCAYALI-CONTAMANA.xlsx" download>Descargar Excel</a>
@@ -1580,7 +1721,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="MADRE_DE_DIOS" data-prov="TAMBOPATA" data-dist="TAMBOPATA" data-ubi="170101">
             <h3>MADRE_DE_DIOS - TAMBOPATA - TAMBOPATA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/MADRE_DE_DIOS-TAMBOPATA-TAMBOPATA.xlsx" download>Descargar Excel</a>
@@ -1590,7 +1731,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="MOQUEGUA" data-prov="ILO" data-dist="ILO" data-ubi="180301">
             <h3>MOQUEGUA - ILO - ILO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/MOQUEGUA-ILO-ILO.xlsx" download>Descargar Excel</a>
@@ -1600,7 +1741,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PASCO" data-prov="OXAPAMPA" data-dist="OXAPAMPA" data-ubi="190301">
             <h3>PASCO - OXAPAMPA - OXAPAMPA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PASCO-OXAPAMPA-OXAPAMPA.xlsx" download>Descargar Excel</a>
@@ -1610,7 +1751,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="AYABACA" data-dist="AYABACA" data-ubi="200201">
             <h3>PIURA - AYABACA - AYABACA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-AYABACA-AYABACA.xlsx" download>Descargar Excel</a>
@@ -1620,7 +1761,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="AYABACA" data-dist="SAPILLICA" data-ubi="200208">
             <h3>PIURA - AYABACA - SAPILLICA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-AYABACA-SAPILLICA.xlsx" download>Descargar Excel</a>
@@ -1630,7 +1771,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="HUANCABAMBA" data-dist="HUANCABAMBA" data-ubi="200301">
             <h3>PIURA - HUANCABAMBA - HUANCABAMBA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-HUANCABAMBA-HUANCABAMBA.xlsx" download>Descargar Excel</a>
@@ -1640,7 +1781,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="MORROPON" data-dist="CHULUCANAS" data-ubi="200401">
             <h3>PIURA - MORROPON - CHULUCANAS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-MORROPON-CHULUCANAS.xlsx" download>Descargar Excel</a>
@@ -1650,7 +1791,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="MORROPON" data-dist="MORROPON" data-ubi="200405">
             <h3>PIURA - MORROPON - MORROPON</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-MORROPON-MORROPON.xlsx" download>Descargar Excel</a>
@@ -1660,7 +1801,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="CASTILLA" data-ubi="200104">
             <h3>PIURA - PIURA - CASTILLA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-PIURA-CASTILLA.xlsx" download>Descargar Excel</a>
@@ -1670,7 +1811,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="LA_ARENA" data-ubi="200109">
             <h3>PIURA - PIURA - LA_ARENA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-PIURA-LA_ARENA.xlsx" download>Descargar Excel</a>
@@ -1680,7 +1821,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="LA_UNION" data-ubi="200110">
             <h3>PIURA - PIURA - LA_UNION</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-PIURA-LA_UNION.xlsx" download>Descargar Excel</a>
@@ -1690,7 +1831,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="PIURA" data-ubi="200101">
             <h3>PIURA - PIURA - PIURA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-PIURA-PIURA.xlsx" download>Descargar Excel</a>
@@ -1700,7 +1841,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="VEINTISEIS_DE_OCTUBRE" data-ubi="200115">
             <h3>PIURA - PIURA - VEINTISEIS_DE_OCTUBRE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-PIURA-VEINTISEIS_DE_OCTUBRE.xlsx" download>Descargar Excel</a>
@@ -1710,7 +1851,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="SECHURA" data-dist="SECHURA" data-ubi="200801">
             <h3>PIURA - SECHURA - SECHURA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-SECHURA-SECHURA.xlsx" download>Descargar Excel</a>
@@ -1720,7 +1861,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="SECHURA" data-dist="VICE" data-ubi="200805">
             <h3>PIURA - SECHURA - VICE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-SECHURA-VICE.xlsx" download>Descargar Excel</a>
@@ -1730,7 +1871,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="SULLANA" data-dist="MARCAVELICA" data-ubi="200605">
             <h3>PIURA - SULLANA - MARCAVELICA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-SULLANA-MARCAVELICA.xlsx" download>Descargar Excel</a>
@@ -1740,7 +1881,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="SULLANA" data-dist="SULLANA" data-ubi="200601">
             <h3>PIURA - SULLANA - SULLANA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-SULLANA-SULLANA.xlsx" download>Descargar Excel</a>
@@ -1750,7 +1891,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="TALARA" data-dist="LOS_ORGANOS" data-ubi="200705">
             <h3>PIURA - TALARA - LOS_ORGANOS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PIURA-TALARA-LOS_ORGANOS.xlsx" download>Descargar Excel</a>
@@ -1760,7 +1901,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="CHUCUITO" data-dist="JULI" data-ubi="210401">
             <h3>PUNO - CHUCUITO - JULI</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-CHUCUITO-JULI.xlsx" download>Descargar Excel</a>
@@ -1770,7 +1911,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="EL_COLLAO" data-dist="ILAVE" data-ubi="210501">
             <h3>PUNO - EL_COLLAO - ILAVE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-EL_COLLAO-ILAVE.xlsx" download>Descargar Excel</a>
@@ -1780,7 +1921,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="HUANCANE" data-dist="HUANCANE" data-ubi="210601">
             <h3>PUNO - HUANCANE - HUANCANE</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-HUANCANE-HUANCANE.xlsx" download>Descargar Excel</a>
@@ -1790,7 +1931,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="PUNO" data-dist="PUNO" data-ubi="210101">
             <h3>PUNO - PUNO - PUNO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-PUNO-PUNO.xlsx" download>Descargar Excel</a>
@@ -1800,7 +1941,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SANDIA" data-dist="SANDIA" data-ubi="211201">
             <h3>PUNO - SANDIA - SANDIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-SANDIA-SANDIA.xlsx" download>Descargar Excel</a>
@@ -1810,7 +1951,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SAN_ANTONIO_DE_PUTINA" data-dist="ANANEA" data-ubi="211002">
             <h3>PUNO - SAN_ANTONIO_DE_PUTINA - ANANEA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-SAN_ANTONIO_DE_PUTINA-ANANEA.xlsx" download>Descargar Excel</a>
@@ -1820,7 +1961,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SAN_ANTONIO_DE_PUTINA" data-dist="PUTINA" data-ubi="211001">
             <h3>PUNO - SAN_ANTONIO_DE_PUTINA - PUTINA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-SAN_ANTONIO_DE_PUTINA-PUTINA.xlsx" download>Descargar Excel</a>
@@ -1830,7 +1971,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SAN_ROMAN" data-dist="JULIACA" data-ubi="211101">
             <h3>PUNO - SAN_ROMAN - JULIACA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-SAN_ROMAN-JULIACA.xlsx" download>Descargar Excel</a>
@@ -1840,7 +1981,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SAN_ROMAN" data-dist="SAN_MIGUEL" data-ubi="211105">
             <h3>PUNO - SAN_ROMAN - SAN_MIGUEL</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-SAN_ROMAN-SAN_MIGUEL.xlsx" download>Descargar Excel</a>
@@ -1850,7 +1991,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="YUNGUYO" data-dist="YUNGUYO" data-ubi="211301">
             <h3>PUNO - YUNGUYO - YUNGUYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/PUNO-YUNGUYO-YUNGUYO.xlsx" download>Descargar Excel</a>
@@ -1860,7 +2001,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="RIOJA" data-dist="ELIAS_SOPLIN_VARGAS" data-ubi="220803">
             <h3>SAN_MARTIN - RIOJA - ELIAS_SOPLIN_VARGAS</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/SAN_MARTIN-RIOJA-ELIAS_SOPLIN_VARGAS.xlsx" download>Descargar Excel</a>
@@ -1870,7 +2011,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="SAN_MARTIN" data-dist="LA_BANDA_DE_SHILCAYO" data-ubi="220909">
             <h3>SAN_MARTIN - SAN_MARTIN - LA_BANDA_DE_SHILCAYO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/SAN_MARTIN-SAN_MARTIN-LA_BANDA_DE_SHILCAYO.xlsx" download>Descargar Excel</a>
@@ -1880,7 +2021,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="SAN_MARTIN" data-dist="MORALES" data-ubi="220910">
             <h3>SAN_MARTIN - SAN_MARTIN - MORALES</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/SAN_MARTIN-SAN_MARTIN-MORALES.xlsx" download>Descargar Excel</a>
@@ -1890,7 +2031,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="SAN_MARTIN" data-dist="TARAPOTO" data-ubi="220901">
             <h3>SAN_MARTIN - SAN_MARTIN - TARAPOTO</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/SAN_MARTIN-SAN_MARTIN-TARAPOTO.xlsx" download>Descargar Excel</a>
@@ -1900,7 +2041,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="TACNA" data-prov="TACNA" data-dist="ALTO_DE_LA_ALIANZA" data-ubi="230102">
             <h3>TACNA - TACNA - ALTO_DE_LA_ALIANZA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/TACNA-TACNA-ALTO_DE_LA_ALIANZA.xlsx" download>Descargar Excel</a>
@@ -1910,7 +2051,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="TACNA" data-prov="TACNA" data-dist="CORONEL_GREGORIO_ALBARRACIN_LANCHIPA" data-ubi="230110">
             <h3>TACNA - TACNA - CORONEL_GREGORIO_ALBARRACIN_LANCHIPA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/TACNA-TACNA-CORONEL_GREGORIO_ALBARRACIN_LANCHIPA.xlsx" download>Descargar Excel</a>
@@ -1920,7 +2061,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="TACNA" data-prov="TACNA" data-dist="TACNA" data-ubi="230101">
             <h3>TACNA - TACNA - TACNA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/TACNA-TACNA-TACNA.xlsx" download>Descargar Excel</a>
@@ -1930,7 +2071,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="UCAYALI" data-prov="CORONEL_PORTILLO" data-dist="CALLERIA" data-ubi="250101">
             <h3>UCAYALI - CORONEL_PORTILLO - CALLERIA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/UCAYALI-CORONEL_PORTILLO-CALLERIA.xlsx" download>Descargar Excel</a>
@@ -1940,7 +2081,7 @@
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="UCAYALI" data-prov="CORONEL_PORTILLO" data-dist="YARINACOCHA" data-ubi="250105">
             <h3>UCAYALI - CORONEL_PORTILLO - YARINACOCHA</h3>
             <div class="row">
               <a class="dl" href="../ZonasEscolares/excels/UCAYALI-CORONEL_PORTILLO-YARINACOCHA.xlsx" download>Descargar Excel</a>

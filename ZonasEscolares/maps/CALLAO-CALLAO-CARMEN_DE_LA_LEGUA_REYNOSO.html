@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_5a6df3da430b63bddd56224731c37a25 {
+                #map_41b837c6fa2ae06ebe732d5c712426a1 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,6 +56,38 @@
     
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        border: 1px solid #e5e7eb;
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display: flex; flex-direction: column; gap: 8px; min-width: 300px; max-width: 92vw;
+      }
+
+      .searchbar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .searchbar-title { font-weight: 700; font-size: 14px; color: #111827; }
+      .toggle-btn { border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; background: #111827; color: #fff; }
+      .tools-body { display: flex; flex-direction: column; gap: 8px; }
+
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input { border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1; }
+      .row-flex button, .col-flex button { border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer; }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line { background: rgba(17,24,39,0.85); color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+
+      .searchbar-wrap.collapsed { padding: 8px 10px; }
+      .searchbar-wrap.collapsed .tools-body { display: none; }
+
+      @media (max-width: 480px) {
+        .searchbar-wrap { right: 12px; bottom: 12px; min-width: 240px; }
+      }
     </style>
     
     
@@ -69,11 +101,11 @@
     </div>
     
     
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
@@ -90,14 +122,53 @@
     </div>
     
     
-            <div class="folium-map" id="map_5a6df3da430b63bddd56224731c37a25" ></div>
+            <div class="folium-map" id="map_41b837c6fa2ae06ebe732d5c712426a1" ></div>
         
+    
+      <div class="searchbar-wrap" id="zs_tools">
+        <div class="searchbar-header">
+          <div class="searchbar-title">Herramientas</div>
+          <button id="btn_toggle_box" class="toggle-btn" title="Mostrar/Ocultar">⯆ Ocultar</button>
+        </div>
+
+        <div class="tools-body">
+          <div class="col-flex">
+            <input id="q_name" type="text" placeholder="Buscar por nombre">
+            <input id="q_code" type="text" placeholder="Buscar por código">
+          </div>
+          <div class="row-flex">
+            <button id="btn_search" class="btn-dark">Buscar</button>
+            <button id="btn_clear" class="btn-gray">Limpiar</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+
+          <div class="col-flex" title="Coordenadas en grados decimales">
+            <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+            <div class="row-flex">
+              <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+              <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+              <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+            <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+          </div>
+        </div>
+      </div>
+    
 </body>
 <script>
     
     
-            var map_5a6df3da430b63bddd56224731c37a25 = L.map(
-                "map_5a6df3da430b63bddd56224731c37a25",
+            var map_41b837c6fa2ae06ebe732d5c712426a1 = L.map(
+                "map_41b837c6fa2ae06ebe732d5c712426a1",
                 {
                     center: [-12.041222, -77.093894],
                     crs: L.CRS.EPSG3857,
@@ -109,13 +180,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_5a6df3da430b63bddd56224731c37a25);
+            L.control.scale().addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
 
             
 
         
     
-            var tile_layer_c29b0cfc3775497ac33823b44122c366 = L.tileLayer(
+            var tile_layer_f52634e0801dd3e7fdbf546f80f1e6f4 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -132,634 +203,995 @@
             );
         
     
-            tile_layer_c29b0cfc3775497ac33823b44122c366.addTo(map_5a6df3da430b63bddd56224731c37a25);
+            tile_layer_f52634e0801dd3e7fdbf546f80f1e6f4.addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
         
     
-            var feature_group_65acb6e7ac30d82661dc789918d56f5d = L.featureGroup(
+            var feature_group_7ce90fbc8c0cac1aaba485176733b06c = L.featureGroup(
                 {
 }
             );
         
     
-        function geo_json_9f4de4410c0e23c06162b39c0e1e262c_styler(feature) {
+        function geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_styler(feature) {
             switch(feature.properties.IDDPTO) {
                 default:
-                    return {"color": "#222222", "fill": true, "fillColor": "#FFA500", "fillOpacity": 0.6, "opacity": 1.0, "weight": 2.5};
+                    return {"color": "#222222", "fill": true, "fillColor": "#9ca3af", "fillOpacity": 0.3, "opacity": 1.0, "weight": 2.5};
             }
         }
 
-        function geo_json_9f4de4410c0e23c06162b39c0e1e262c_onEachFeature(feature, layer) {
+        function geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_onEachFeature(feature, layer) {
 
             layer.on({
             });
         };
-        var geo_json_9f4de4410c0e23c06162b39c0e1e262c = L.geoJson(null, {
-                onEachFeature: geo_json_9f4de4410c0e23c06162b39c0e1e262c_onEachFeature,
+        var geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e = L.geoJson(null, {
+                onEachFeature: geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_onEachFeature,
             
-                style: geo_json_9f4de4410c0e23c06162b39c0e1e262c_styler,
+                style: geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_styler,
             ...{
 }
         });
 
-        function geo_json_9f4de4410c0e23c06162b39c0e1e262c_add (data) {
-            geo_json_9f4de4410c0e23c06162b39c0e1e262c
+        function geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_add (data) {
+            geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e
                 .addData(data);
         }
-            geo_json_9f4de4410c0e23c06162b39c0e1e262c_add({"features": [{"geometry": {"coordinates": [[[[-77.08316998599997, -12.039246104999904], [-77.08263286199997, -12.045037104999892], [-77.08172261099998, -12.044956853999906], [-77.08154686099988, -12.047017604999894], [-77.09832036099988, -12.048519479999982], [-77.09913086199998, -12.03998447999993], [-77.0972968609999, -12.039269479999973], [-77.09445886099996, -12.03867772999996], [-77.09346698599995, -12.038436604999902], [-77.09283998599994, -12.038289979999945], [-77.09184448699989, -12.03814235499982], [-77.09084398699997, -12.037920479999912], [-77.08970561099994, -12.037687104999975], [-77.08882898699989, -12.037524479999945], [-77.08809036099996, -12.0373394799999], [-77.08749236099999, -12.037287979999917], [-77.08674323699995, -12.037149854999939], [-77.08556248599996, -12.036888229999875], [-77.0849119859999, -12.036782104999872], [-77.08419111099994, -12.036675354999943], [-77.08361998599992, -12.036489979999942], [-77.08294048599993, -12.036417853999865], [-77.08259361199998, -12.039205104999894], [-77.08316998599997, -12.039246104999904]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "CARMEN DE LA LEGUA REYNOSO", "CODCCPP": "0001", "DEPARTAMEN": "CALLAO", "DISTRITO": "CARMEN DE LA LEGUA REYNOSO", "FUENTE": "INEI", "IDDIST": "070103", "IDDPTO": "07", "IDPROV": "0701", "PROVINCIA": "CALLAO"}, "type": "Feature"}], "type": "FeatureCollection"});
+            geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e_add({"features": [{"geometry": {"coordinates": [[[[-77.08316998599997, -12.039246104999904], [-77.08263286199997, -12.045037104999892], [-77.08172261099998, -12.044956853999906], [-77.08154686099988, -12.047017604999894], [-77.09832036099988, -12.048519479999982], [-77.09913086199998, -12.03998447999993], [-77.0972968609999, -12.039269479999973], [-77.09445886099996, -12.03867772999996], [-77.09346698599995, -12.038436604999902], [-77.09283998599994, -12.038289979999945], [-77.09184448699989, -12.03814235499982], [-77.09084398699997, -12.037920479999912], [-77.08970561099994, -12.037687104999975], [-77.08882898699989, -12.037524479999945], [-77.08809036099996, -12.0373394799999], [-77.08749236099999, -12.037287979999917], [-77.08674323699995, -12.037149854999939], [-77.08556248599996, -12.036888229999875], [-77.0849119859999, -12.036782104999872], [-77.08419111099994, -12.036675354999943], [-77.08361998599992, -12.036489979999942], [-77.08294048599993, -12.036417853999865], [-77.08259361199998, -12.039205104999894], [-77.08316998599997, -12.039246104999904]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "CARMEN DE LA LEGUA REYNOSO", "CODCCPP": "0001", "DEPARTAMEN": "CALLAO", "DISTRITO": "CARMEN DE LA LEGUA REYNOSO", "FUENTE": "INEI", "IDDIST": "070103", "IDDPTO": "07", "IDPROV": "0701", "PROVINCIA": "CALLAO"}, "type": "Feature"}], "type": "FeatureCollection"});
 
         
     
-            geo_json_9f4de4410c0e23c06162b39c0e1e262c.addTo(feature_group_65acb6e7ac30d82661dc789918d56f5d);
+            geo_json_0b0cdaa6204a37da0a9fc51f180d7b4e.addTo(feature_group_7ce90fbc8c0cac1aaba485176733b06c);
         
     
-            feature_group_65acb6e7ac30d82661dc789918d56f5d.addTo(map_5a6df3da430b63bddd56224731c37a25);
+            feature_group_7ce90fbc8c0cac1aaba485176733b06c.addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
         
     
-            var feature_group_b82d35171e54b1e4100b2ab1a2ec44a3 = L.featureGroup(
+            var feature_group_bf85f88f0588e42606f871076cffdca4 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_715655434ce840d0e0915ff668ff75cc = L.circle(
+            var circle_bb52fe7943e60361dd5013c47e6c5233 = L.circle(
                 [-12.04241, -77.09204],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_632f3d6ad6fca0519aae9e99046aa10a = L.circle(
+            var circle_06729c31f76d29564cc326740e3c7c6d = L.circle(
                 [-12.04198, -77.08676],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_0fcf690213fb89cf239189afc33fc18f = L.circle(
+            var circle_bc8d545621e874e41a90b816ed01bdf6 = L.circle(
                 [-12.04019, -77.09722],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_dfc5cd964cf9c6b63285f31df0ee41b2 = L.circle(
+            var circle_6d248d15f6edc7391607021562e2d152 = L.circle(
                 [-12.04136, -77.09052],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_8eff59a5bae67f86252f5bfcdbc72da1 = L.circle(
+            var circle_f5daacb15dbd0be69bd225dd463f622c = L.circle(
                 [-12.04331, -77.09604],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_fa90a68e27e7da3e5a4e1dfbfcb8922d = L.circle(
+            var circle_cf3e8de6cc5d54a458b032a07142dcc2 = L.circle(
                 [-12.04456, -77.09701],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_df92661ca428e8abd849af4823cb83ec = L.circle(
+            var circle_99c949c3cf670d608aa502ecbf7a342b = L.circle(
                 [-12.03904, -77.09109],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_26ac6189486bc71cc10d2facdeb1f7d7 = L.circle(
+            var circle_1b6c165c9c2e9deb7ff30162c98f529a = L.circle(
                 [-12.04327, -77.09718],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_5df5c90b0fc56c0796245455e36e6745 = L.circle(
+            var circle_47ba45b2a4ca5d95af582a770dc01b02 = L.circle(
                 [-12.03898, -77.09077],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_9ff813e85599f721c1c1a7a60dcc1f92 = L.circle(
+            var circle_12fb6e684fe55f9a4e3b7880471bdaaa = L.circle(
                 [-12.04056, -77.09428],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_8b1e20863c5a951a74616936d66a5745 = L.circle(
+            var circle_a358c9641a4a17053180bc10e0ad4134 = L.circle(
                 [-12.04005, -77.09432],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_58148fe571b3a54ad1f951fa2985c909 = L.circle(
+            var circle_8f1bd84b26a1215662c56e3be47373db = L.circle(
                 [-12.04161, -77.09655],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_a83342b7c523f9c028397c0981dfd5e6 = L.circle(
+            var circle_540ddd6f91a4e889e7ddc4a78b94af19 = L.circle(
                 [-12.03967, -77.09163],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_40d53a0e0a657b36f5edf5f5170d297c = L.circle(
+            var circle_8b97766b6938f5dc971f0a8258de4af2 = L.circle(
                 [-12.03997, -77.09629],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            var circle_766c108a40ba9dbad72722be1b553955 = L.circle(
+            var circle_13b7c8372f8be0bc5fbe7d422158d2b1 = L.circle(
                 [-12.04137, -77.09671],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_b82d35171e54b1e4100b2ab1a2ec44a3);
+            ).addTo(feature_group_bf85f88f0588e42606f871076cffdca4);
         
     
-            feature_group_b82d35171e54b1e4100b2ab1a2ec44a3.addTo(map_5a6df3da430b63bddd56224731c37a25);
+            feature_group_bf85f88f0588e42606f871076cffdca4.addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
         
     
-            var feature_group_8dd8ceef862b204bda207521fe940aa1 = L.featureGroup(
+            var feature_group_4f972d8d43b77253d9de3c92225d75bc = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_7e0342e83892cdefee66d35266f1bc22 = L.circleMarker(
+            var circle_marker_ada4727d99d8b44108f21be405e02acb = L.circleMarker(
                 [-12.04241, -77.09204],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_a0fa4ece53d4788e2c5ff2c284dcdb00 = L.popup({
-  "maxWidth": 400,
+        var popup_1e4a76116e92a006a42bbca73938eeab = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_e273e07fa265a735001f08858cb289cf = $(`<div id="html_e273e07fa265a735001f08858cb289cf" style="width: 100.0%; height: 100.0%;"><b>88 CRISTO MILAGROSO</b><br>Código CE: 143396<br>UBIGEO gestor: 070103<br>Alumnos: 432<br>Docentes: 20<br>Siniestros: 0</div>`)[0];
-                popup_a0fa4ece53d4788e2c5ff2c284dcdb00.setContent(html_e273e07fa265a735001f08858cb289cf);
+                var html_e899ffe5464e5d0148dfb46e6bbf3e00 = $(`<div id="html_e899ffe5464e5d0148dfb46e6bbf3e00" style="width: 100.0%; height: 100.0%;"><b>88 CRISTO MILAGROSO</b><br>Código CE: 143396<br>UBIGEO gestor: 070103<br>Latitud: -12.04241<br>Longitud: -77.09204<br>Alumnos: 432<br>Docentes: 20<br>Siniestros: 0</div>`)[0];
+                popup_1e4a76116e92a006a42bbca73938eeab.setContent(html_e899ffe5464e5d0148dfb46e6bbf3e00);
             
         
 
-        circle_marker_7e0342e83892cdefee66d35266f1bc22.bindPopup(popup_a0fa4ece53d4788e2c5ff2c284dcdb00)
+        circle_marker_ada4727d99d8b44108f21be405e02acb.bindPopup(popup_1e4a76116e92a006a42bbca73938eeab)
         ;
 
         
     
     
-            var circle_marker_170c22f8591844ddc821a9872346ea17 = L.circleMarker(
+            circle_marker_ada4727d99d8b44108f21be405e02acb.bindTooltip(
+                `<div>
+                     88 cristo milagroso | 143396
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_3022941309bb482298bcd8627e053fc8 = L.circleMarker(
                 [-12.04198, -77.08676],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_b51bb2309773a6ae0e715ea4f208f6ac = L.popup({
-  "maxWidth": 400,
+        var popup_4d89daed68f6cf98fd4d57f075b4e1a1 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_7f88013ca5414f7b0b3587da3ec38b77 = $(`<div id="html_7f88013ca5414f7b0b3587da3ec38b77" style="width: 100.0%; height: 100.0%;"><b>4015 AUGUSTO SALAZAR BONDY</b><br>Código CE: 143400<br>UBIGEO gestor: 070103<br>Alumnos: 1258<br>Docentes: 64<br>Siniestros: 0</div>`)[0];
-                popup_b51bb2309773a6ae0e715ea4f208f6ac.setContent(html_7f88013ca5414f7b0b3587da3ec38b77);
+                var html_d494e94c826eae76ee007cdc5907af88 = $(`<div id="html_d494e94c826eae76ee007cdc5907af88" style="width: 100.0%; height: 100.0%;"><b>4015 AUGUSTO SALAZAR BONDY</b><br>Código CE: 143400<br>UBIGEO gestor: 070103<br>Latitud: -12.04198<br>Longitud: -77.08676<br>Alumnos: 1258<br>Docentes: 64<br>Siniestros: 0</div>`)[0];
+                popup_4d89daed68f6cf98fd4d57f075b4e1a1.setContent(html_d494e94c826eae76ee007cdc5907af88);
             
         
 
-        circle_marker_170c22f8591844ddc821a9872346ea17.bindPopup(popup_b51bb2309773a6ae0e715ea4f208f6ac)
+        circle_marker_3022941309bb482298bcd8627e053fc8.bindPopup(popup_4d89daed68f6cf98fd4d57f075b4e1a1)
         ;
 
         
     
     
-            var circle_marker_ba47fe52339ed91e8ef7ab5701e2f297 = L.circleMarker(
+            circle_marker_3022941309bb482298bcd8627e053fc8.bindTooltip(
+                `<div>
+                     4015 augusto salazar bondy | 143400
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_264c5084058e46850a4ec9f8708633ff = L.circleMarker(
                 [-12.04019, -77.09722],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_179f79c7476e10b676d5c006db4f2486 = L.popup({
-  "maxWidth": 400,
+        var popup_68c9e7439d494c54cf4b2da253f2f9a1 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_ed47072fe0638657f1e4102c34cd7041 = $(`<div id="html_ed47072fe0638657f1e4102c34cd7041" style="width: 100.0%; height: 100.0%;"><b>5030 TNTE. CRNEL. LEOPOLDO PEREZ SALMON</b><br>Código CE: 143419<br>UBIGEO gestor: 070103<br>Alumnos: 648<br>Docentes: 26<br>Siniestros: 0</div>`)[0];
-                popup_179f79c7476e10b676d5c006db4f2486.setContent(html_ed47072fe0638657f1e4102c34cd7041);
+                var html_e4f21038c65b8361a924ec7c797d0526 = $(`<div id="html_e4f21038c65b8361a924ec7c797d0526" style="width: 100.0%; height: 100.0%;"><b>5030 TNTE. CRNEL. LEOPOLDO PEREZ SALMON</b><br>Código CE: 143419<br>UBIGEO gestor: 070103<br>Latitud: -12.04019<br>Longitud: -77.09722<br>Alumnos: 648<br>Docentes: 26<br>Siniestros: 0</div>`)[0];
+                popup_68c9e7439d494c54cf4b2da253f2f9a1.setContent(html_e4f21038c65b8361a924ec7c797d0526);
             
         
 
-        circle_marker_ba47fe52339ed91e8ef7ab5701e2f297.bindPopup(popup_179f79c7476e10b676d5c006db4f2486)
+        circle_marker_264c5084058e46850a4ec9f8708633ff.bindPopup(popup_68c9e7439d494c54cf4b2da253f2f9a1)
         ;
 
         
     
     
-            var circle_marker_e8a27c4ce941fd953872323305c33015 = L.circleMarker(
+            circle_marker_264c5084058e46850a4ec9f8708633ff.bindTooltip(
+                `<div>
+                     5030 tnte. crnel. leopoldo perez salmon | 143419
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_8d6f8ac6476c61180fbe8f7591ec1392 = L.circleMarker(
                 [-12.04136, -77.09052],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_dcdd77c3e09b91394c9869dbdb9f5448 = L.popup({
-  "maxWidth": 400,
+        var popup_277f7e1ea36ecb890c55ecad691c2a0b = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_c3843b08a3c00f51aa4a2102101e6144 = $(`<div id="html_c3843b08a3c00f51aa4a2102101e6144" style="width: 100.0%; height: 100.0%;"><b>5035 SAN RAFAEL</b><br>Código CE: 143424<br>UBIGEO gestor: 070103<br>Alumnos: 316<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
-                popup_dcdd77c3e09b91394c9869dbdb9f5448.setContent(html_c3843b08a3c00f51aa4a2102101e6144);
+                var html_2e85de7156e0f322b2c3a5f8ddde8629 = $(`<div id="html_2e85de7156e0f322b2c3a5f8ddde8629" style="width: 100.0%; height: 100.0%;"><b>5035 SAN RAFAEL</b><br>Código CE: 143424<br>UBIGEO gestor: 070103<br>Latitud: -12.04136<br>Longitud: -77.09052<br>Alumnos: 316<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
+                popup_277f7e1ea36ecb890c55ecad691c2a0b.setContent(html_2e85de7156e0f322b2c3a5f8ddde8629);
             
         
 
-        circle_marker_e8a27c4ce941fd953872323305c33015.bindPopup(popup_dcdd77c3e09b91394c9869dbdb9f5448)
+        circle_marker_8d6f8ac6476c61180fbe8f7591ec1392.bindPopup(popup_277f7e1ea36ecb890c55ecad691c2a0b)
         ;
 
         
     
     
-            var circle_marker_abfc32f455dd8b6d9942971750f5d0e6 = L.circleMarker(
+            circle_marker_8d6f8ac6476c61180fbe8f7591ec1392.bindTooltip(
+                `<div>
+                     5035 san rafael | 143424
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_083755288195e95377d3cd835961f2e7 = L.circleMarker(
                 [-12.04331, -77.09604],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_18df1dcad6685e718a484a24b1138d10 = L.popup({
-  "maxWidth": 400,
+        var popup_ce4c1c10cb21fb20117bf245d46098ba = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_844055692d039be94f87cea33927df14 = $(`<div id="html_844055692d039be94f87cea33927df14" style="width: 100.0%; height: 100.0%;"><b>5041 NUESTRA SEÑORA DEL MONTE CARMELO</b><br>Código CE: 143438<br>UBIGEO gestor: 070103<br>Alumnos: 459<br>Docentes: 34<br>Siniestros: 0</div>`)[0];
-                popup_18df1dcad6685e718a484a24b1138d10.setContent(html_844055692d039be94f87cea33927df14);
+                var html_5082247fb7fd39b8944349f9db7746a1 = $(`<div id="html_5082247fb7fd39b8944349f9db7746a1" style="width: 100.0%; height: 100.0%;"><b>5041 NUESTRA SEÑORA DEL MONTE CARMELO</b><br>Código CE: 143438<br>UBIGEO gestor: 070103<br>Latitud: -12.04331<br>Longitud: -77.09604<br>Alumnos: 459<br>Docentes: 34<br>Siniestros: 0</div>`)[0];
+                popup_ce4c1c10cb21fb20117bf245d46098ba.setContent(html_5082247fb7fd39b8944349f9db7746a1);
             
         
 
-        circle_marker_abfc32f455dd8b6d9942971750f5d0e6.bindPopup(popup_18df1dcad6685e718a484a24b1138d10)
+        circle_marker_083755288195e95377d3cd835961f2e7.bindPopup(popup_ce4c1c10cb21fb20117bf245d46098ba)
         ;
 
         
     
     
-            var circle_marker_c0d645c0cbacf4b89fe49855d98c2a1b = L.circleMarker(
+            circle_marker_083755288195e95377d3cd835961f2e7.bindTooltip(
+                `<div>
+                     5041 nuestra señora del monte carmelo | 143438
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_7f5ebce69b8e8421d913dd50dc79b7b7 = L.circleMarker(
                 [-12.04456, -77.09701],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_ebffa9ba357325403d630e4b4317573d = L.popup({
-  "maxWidth": 400,
+        var popup_aff447f2dea9a9189cc5599d398a979f = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_2abb5e4635a94d66990df287e9a0b152 = $(`<div id="html_2abb5e4635a94d66990df287e9a0b152" style="width: 100.0%; height: 100.0%;"><b>5043 SAN MARTIN DE PORRES</b><br>Código CE: 143443<br>UBIGEO gestor: 070103<br>Alumnos: 400<br>Docentes: 19<br>Siniestros: 0</div>`)[0];
-                popup_ebffa9ba357325403d630e4b4317573d.setContent(html_2abb5e4635a94d66990df287e9a0b152);
+                var html_da5a9df4d0c0a7335f92fd42d936e36a = $(`<div id="html_da5a9df4d0c0a7335f92fd42d936e36a" style="width: 100.0%; height: 100.0%;"><b>5043 SAN MARTIN DE PORRES</b><br>Código CE: 143443<br>UBIGEO gestor: 070103<br>Latitud: -12.04456<br>Longitud: -77.09701<br>Alumnos: 400<br>Docentes: 19<br>Siniestros: 0</div>`)[0];
+                popup_aff447f2dea9a9189cc5599d398a979f.setContent(html_da5a9df4d0c0a7335f92fd42d936e36a);
             
         
 
-        circle_marker_c0d645c0cbacf4b89fe49855d98c2a1b.bindPopup(popup_ebffa9ba357325403d630e4b4317573d)
+        circle_marker_7f5ebce69b8e8421d913dd50dc79b7b7.bindPopup(popup_aff447f2dea9a9189cc5599d398a979f)
         ;
 
         
     
     
-            var circle_marker_ca4aedd1326903cb966c9e4fcb4d81e4 = L.circleMarker(
+            circle_marker_7f5ebce69b8e8421d913dd50dc79b7b7.bindTooltip(
+                `<div>
+                     5043 san martin de porres | 143443
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_ee5be640649d1d21e8416a1a79ec2613 = L.circleMarker(
                 [-12.03904, -77.09109],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_2a1b24d41a62f16d22d9f49d8be5d6ff = L.popup({
-  "maxWidth": 400,
+        var popup_bae15bef55191f9b9ee821f4b760d05f = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_0d1c3b8a8bbb6bb1acd6979cd6fa3531 = $(`<div id="html_0d1c3b8a8bbb6bb1acd6979cd6fa3531" style="width: 100.0%; height: 100.0%;"><b>5044 BANDERA DE LA PAZ</b><br>Código CE: 143457<br>UBIGEO gestor: 070103<br>Alumnos: 660<br>Docentes: 28<br>Siniestros: 0</div>`)[0];
-                popup_2a1b24d41a62f16d22d9f49d8be5d6ff.setContent(html_0d1c3b8a8bbb6bb1acd6979cd6fa3531);
+                var html_a965bfc8705a56d9f2c133a145250356 = $(`<div id="html_a965bfc8705a56d9f2c133a145250356" style="width: 100.0%; height: 100.0%;"><b>5044 BANDERA DE LA PAZ</b><br>Código CE: 143457<br>UBIGEO gestor: 070103<br>Latitud: -12.03904<br>Longitud: -77.09109<br>Alumnos: 660<br>Docentes: 28<br>Siniestros: 0</div>`)[0];
+                popup_bae15bef55191f9b9ee821f4b760d05f.setContent(html_a965bfc8705a56d9f2c133a145250356);
             
         
 
-        circle_marker_ca4aedd1326903cb966c9e4fcb4d81e4.bindPopup(popup_2a1b24d41a62f16d22d9f49d8be5d6ff)
+        circle_marker_ee5be640649d1d21e8416a1a79ec2613.bindPopup(popup_bae15bef55191f9b9ee821f4b760d05f)
         ;
 
         
     
     
-            var circle_marker_bbd3a68fe0a980e77cb4262162dd7b84 = L.circleMarker(
+            circle_marker_ee5be640649d1d21e8416a1a79ec2613.bindTooltip(
+                `<div>
+                     5044 bandera de la paz | 143457
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_2650fbf24765a80f1438005cd2d852dc = L.circleMarker(
                 [-12.04327, -77.09718],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_a8b1af7720f7a8b8a0a92c30a9eac583 = L.popup({
-  "maxWidth": 400,
+        var popup_a5fe843faa90876f24663a6909730639 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_2921f963ab744243cc63882cc0f8e208 = $(`<div id="html_2921f963ab744243cc63882cc0f8e208" style="width: 100.0%; height: 100.0%;"><b>RAUL PORRAS BARRENECHEA</b><br>Código CE: 143462<br>UBIGEO gestor: 070103<br>Alumnos: 1566<br>Docentes: 79<br>Siniestros: 0</div>`)[0];
-                popup_a8b1af7720f7a8b8a0a92c30a9eac583.setContent(html_2921f963ab744243cc63882cc0f8e208);
+                var html_03584e69bccf7bedf91682c4e7a35c06 = $(`<div id="html_03584e69bccf7bedf91682c4e7a35c06" style="width: 100.0%; height: 100.0%;"><b>RAUL PORRAS BARRENECHEA</b><br>Código CE: 143462<br>UBIGEO gestor: 070103<br>Latitud: -12.04327<br>Longitud: -77.09718<br>Alumnos: 1566<br>Docentes: 79<br>Siniestros: 0</div>`)[0];
+                popup_a5fe843faa90876f24663a6909730639.setContent(html_03584e69bccf7bedf91682c4e7a35c06);
             
         
 
-        circle_marker_bbd3a68fe0a980e77cb4262162dd7b84.bindPopup(popup_a8b1af7720f7a8b8a0a92c30a9eac583)
+        circle_marker_2650fbf24765a80f1438005cd2d852dc.bindPopup(popup_a5fe843faa90876f24663a6909730639)
         ;
 
         
     
     
-            var circle_marker_36d712da12b8f541791c12788f7605a9 = L.circleMarker(
+            circle_marker_2650fbf24765a80f1438005cd2d852dc.bindTooltip(
+                `<div>
+                     raul porras barrenechea | 143462
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_7ff3d9cb9c2f0ac046599a4512165a48 = L.circleMarker(
                 [-12.03898, -77.09077],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_7af4d27610e515ab35be333fea838f46 = L.popup({
-  "maxWidth": 400,
+        var popup_db7d6871c081a68041f3d3e3142e061f = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_6e67a50547410129bdfba9fc171142c3 = $(`<div id="html_6e67a50547410129bdfba9fc171142c3" style="width: 100.0%; height: 100.0%;"><b>SANTA ANGELA MERICI</b><br>Código CE: 143481<br>UBIGEO gestor: 070103<br>Alumnos: 413<br>Docentes: 25<br>Siniestros: 0</div>`)[0];
-                popup_7af4d27610e515ab35be333fea838f46.setContent(html_6e67a50547410129bdfba9fc171142c3);
+                var html_88813b9ee3a545825e3ac8b0a034a44a = $(`<div id="html_88813b9ee3a545825e3ac8b0a034a44a" style="width: 100.0%; height: 100.0%;"><b>SANTA ANGELA MERICI</b><br>Código CE: 143481<br>UBIGEO gestor: 070103<br>Latitud: -12.03898<br>Longitud: -77.09077<br>Alumnos: 413<br>Docentes: 25<br>Siniestros: 0</div>`)[0];
+                popup_db7d6871c081a68041f3d3e3142e061f.setContent(html_88813b9ee3a545825e3ac8b0a034a44a);
             
         
 
-        circle_marker_36d712da12b8f541791c12788f7605a9.bindPopup(popup_7af4d27610e515ab35be333fea838f46)
+        circle_marker_7ff3d9cb9c2f0ac046599a4512165a48.bindPopup(popup_db7d6871c081a68041f3d3e3142e061f)
         ;
 
         
     
     
-            var circle_marker_d2fce079b06d096f9c104fd9e4a1b862 = L.circleMarker(
+            circle_marker_7ff3d9cb9c2f0ac046599a4512165a48.bindTooltip(
+                `<div>
+                     santa angela merici | 143481
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_ac95201e61d4bc68c9179a83fccd5fea = L.circleMarker(
                 [-12.04056, -77.09428],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_9b98ee4b1bbf00d9a2e66e54476d6a6c = L.popup({
-  "maxWidth": 400,
+        var popup_0cd6375d60a91f4bb51f24bac0c1e886 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_063ef353834aca4082f629d7cc73c7ab = $(`<div id="html_063ef353834aca4082f629d7cc73c7ab" style="width: 100.0%; height: 100.0%;"><b>REGINA PACIS</b><br>Código CE: 143565<br>UBIGEO gestor: 070103<br>Alumnos: 257<br>Docentes: 11<br>Siniestros: 1</div>`)[0];
-                popup_9b98ee4b1bbf00d9a2e66e54476d6a6c.setContent(html_063ef353834aca4082f629d7cc73c7ab);
+                var html_0f50a46a66cddd973584c3952fa48413 = $(`<div id="html_0f50a46a66cddd973584c3952fa48413" style="width: 100.0%; height: 100.0%;"><b>REGINA PACIS</b><br>Código CE: 143565<br>UBIGEO gestor: 070103<br>Latitud: -12.04056<br>Longitud: -77.09428<br>Alumnos: 257<br>Docentes: 11<br>Siniestros: 1</div>`)[0];
+                popup_0cd6375d60a91f4bb51f24bac0c1e886.setContent(html_0f50a46a66cddd973584c3952fa48413);
             
         
 
-        circle_marker_d2fce079b06d096f9c104fd9e4a1b862.bindPopup(popup_9b98ee4b1bbf00d9a2e66e54476d6a6c)
+        circle_marker_ac95201e61d4bc68c9179a83fccd5fea.bindPopup(popup_0cd6375d60a91f4bb51f24bac0c1e886)
         ;
 
         
     
     
-            var circle_marker_2fb18c690e3ab57541e9c04aa3ea669e = L.circleMarker(
+            circle_marker_ac95201e61d4bc68c9179a83fccd5fea.bindTooltip(
+                `<div>
+                     regina pacis | 143565
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_06a02701e168bf0e9608729f8fffdae1 = L.circleMarker(
                 [-12.04005, -77.09432],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_844cc2663f2382d139fb39b8a1ffe119 = L.popup({
-  "maxWidth": 400,
+        var popup_a4e5f9ce4a31a843975d1fec0ad72ad3 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_e2223c7fca670a1e889efb3addb0d6d4 = $(`<div id="html_e2223c7fca670a1e889efb3addb0d6d4" style="width: 100.0%; height: 100.0%;"><b>MANITAS PINTADAS</b><br>Código CE: 533507<br>UBIGEO gestor: 070103<br>Alumnos: 10<br>Docentes: 2<br>Siniestros: 1</div>`)[0];
-                popup_844cc2663f2382d139fb39b8a1ffe119.setContent(html_e2223c7fca670a1e889efb3addb0d6d4);
+                var html_1e21acdcd66a9c392367a9cc47e4b423 = $(`<div id="html_1e21acdcd66a9c392367a9cc47e4b423" style="width: 100.0%; height: 100.0%;"><b>MANITAS PINTADAS</b><br>Código CE: 533507<br>UBIGEO gestor: 070103<br>Latitud: -12.04005<br>Longitud: -77.09432<br>Alumnos: 10<br>Docentes: 2<br>Siniestros: 1</div>`)[0];
+                popup_a4e5f9ce4a31a843975d1fec0ad72ad3.setContent(html_1e21acdcd66a9c392367a9cc47e4b423);
             
         
 
-        circle_marker_2fb18c690e3ab57541e9c04aa3ea669e.bindPopup(popup_844cc2663f2382d139fb39b8a1ffe119)
+        circle_marker_06a02701e168bf0e9608729f8fffdae1.bindPopup(popup_a4e5f9ce4a31a843975d1fec0ad72ad3)
         ;
 
         
     
     
-            var circle_marker_8a450ce0055c7d9b121c1020351ad536 = L.circleMarker(
+            circle_marker_06a02701e168bf0e9608729f8fffdae1.bindTooltip(
+                `<div>
+                     manitas pintadas | 533507
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_8e5438da6b301432e78fbf54167d91f9 = L.circleMarker(
                 [-12.04161, -77.09655],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_4bfaf037989e3514a63269d44d5fd7b9 = L.popup({
-  "maxWidth": 400,
+        var popup_518f81e4c9a1bcdf1a3f9b95add7ff3e = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_e84a84123345a87c41ac61c07e892bfb = $(`<div id="html_e84a84123345a87c41ac61c07e892bfb" style="width: 100.0%; height: 100.0%;"><b>B. GROUP - SEDE II</b><br>Código CE: 585780<br>UBIGEO gestor: 070103<br>Alumnos: 326<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
-                popup_4bfaf037989e3514a63269d44d5fd7b9.setContent(html_e84a84123345a87c41ac61c07e892bfb);
+                var html_cafec6a1ff44b69cb22be3e502a3703f = $(`<div id="html_cafec6a1ff44b69cb22be3e502a3703f" style="width: 100.0%; height: 100.0%;"><b>B. GROUP - SEDE II</b><br>Código CE: 585780<br>UBIGEO gestor: 070103<br>Latitud: -12.04161<br>Longitud: -77.09655<br>Alumnos: 326<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
+                popup_518f81e4c9a1bcdf1a3f9b95add7ff3e.setContent(html_cafec6a1ff44b69cb22be3e502a3703f);
             
         
 
-        circle_marker_8a450ce0055c7d9b121c1020351ad536.bindPopup(popup_4bfaf037989e3514a63269d44d5fd7b9)
+        circle_marker_8e5438da6b301432e78fbf54167d91f9.bindPopup(popup_518f81e4c9a1bcdf1a3f9b95add7ff3e)
         ;
 
         
     
     
-            var circle_marker_d2d4a00f69579935c35f88e21d15de60 = L.circleMarker(
+            circle_marker_8e5438da6b301432e78fbf54167d91f9.bindTooltip(
+                `<div>
+                     b. group - sede ii | 585780
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_e2976b736df1309213483d8079d9b00b = L.circleMarker(
                 [-12.03967, -77.09163],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_825e10637a78c526021097fd04943f1e = L.popup({
-  "maxWidth": 400,
+        var popup_bf4a1edef6954a5f6b092fb14a0367ac = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_ac04dc09e629689fa8be47f0432f360c = $(`<div id="html_ac04dc09e629689fa8be47f0432f360c" style="width: 100.0%; height: 100.0%;"><b>ANTON</b><br>Código CE: 594119<br>UBIGEO gestor: 070103<br>Alumnos: 343<br>Docentes: 19<br>Siniestros: 0</div>`)[0];
-                popup_825e10637a78c526021097fd04943f1e.setContent(html_ac04dc09e629689fa8be47f0432f360c);
+                var html_9138f5eeb0880dff85ce6100a8bd0d26 = $(`<div id="html_9138f5eeb0880dff85ce6100a8bd0d26" style="width: 100.0%; height: 100.0%;"><b>ANTON</b><br>Código CE: 594119<br>UBIGEO gestor: 070103<br>Latitud: -12.03967<br>Longitud: -77.09163<br>Alumnos: 343<br>Docentes: 19<br>Siniestros: 0</div>`)[0];
+                popup_bf4a1edef6954a5f6b092fb14a0367ac.setContent(html_9138f5eeb0880dff85ce6100a8bd0d26);
             
         
 
-        circle_marker_d2d4a00f69579935c35f88e21d15de60.bindPopup(popup_825e10637a78c526021097fd04943f1e)
+        circle_marker_e2976b736df1309213483d8079d9b00b.bindPopup(popup_bf4a1edef6954a5f6b092fb14a0367ac)
         ;
 
         
     
     
-            var circle_marker_64824aecaac17a9e9b962adef21d1c72 = L.circleMarker(
+            circle_marker_e2976b736df1309213483d8079d9b00b.bindTooltip(
+                `<div>
+                     anton | 594119
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_f43fe0554b15655f86dd8df9da8e8cde = L.circleMarker(
                 [-12.03997, -77.09629],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_453c95cad71622cedd6af3d8070e80b3 = L.popup({
-  "maxWidth": 400,
+        var popup_a970a9590effae5db2fd4e90cc9871b8 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_eaa901b3567e0066bf8a4a4992b27c58 = $(`<div id="html_eaa901b3567e0066bf8a4a4992b27c58" style="width: 100.0%; height: 100.0%;"><b>REGINA PACIS</b><br>Código CE: 594336<br>UBIGEO gestor: 070103<br>Alumnos: 212<br>Docentes: 11<br>Siniestros: 0</div>`)[0];
-                popup_453c95cad71622cedd6af3d8070e80b3.setContent(html_eaa901b3567e0066bf8a4a4992b27c58);
+                var html_475e398dcae7551d60cbca70deb1c72d = $(`<div id="html_475e398dcae7551d60cbca70deb1c72d" style="width: 100.0%; height: 100.0%;"><b>REGINA PACIS</b><br>Código CE: 594336<br>UBIGEO gestor: 070103<br>Latitud: -12.03997<br>Longitud: -77.09629<br>Alumnos: 212<br>Docentes: 11<br>Siniestros: 0</div>`)[0];
+                popup_a970a9590effae5db2fd4e90cc9871b8.setContent(html_475e398dcae7551d60cbca70deb1c72d);
             
         
 
-        circle_marker_64824aecaac17a9e9b962adef21d1c72.bindPopup(popup_453c95cad71622cedd6af3d8070e80b3)
+        circle_marker_f43fe0554b15655f86dd8df9da8e8cde.bindPopup(popup_a970a9590effae5db2fd4e90cc9871b8)
         ;
 
         
     
     
-            var circle_marker_818b46008e30588d16091f8cc134f2bd = L.circleMarker(
+            circle_marker_f43fe0554b15655f86dd8df9da8e8cde.bindTooltip(
+                `<div>
+                     regina pacis | 594336
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_26e698478af963e33dd065f1a22fc069 = L.circleMarker(
                 [-12.04137, -77.09671],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_8dd8ceef862b204bda207521fe940aa1);
+            ).addTo(feature_group_4f972d8d43b77253d9de3c92225d75bc);
         
     
-        var popup_5f825f45327765cffaf5a43acec963c2 = L.popup({
-  "maxWidth": 400,
+        var popup_83613d9cb8d23711d78ae49c3652cf20 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_9dc40c23fb8543d451805f14dbe83bc9 = $(`<div id="html_9dc40c23fb8543d451805f14dbe83bc9" style="width: 100.0%; height: 100.0%;"><b>B. GROUP</b><br>Código CE: 595977<br>UBIGEO gestor: 070103<br>Alumnos: 632<br>Docentes: 54<br>Siniestros: 0</div>`)[0];
-                popup_5f825f45327765cffaf5a43acec963c2.setContent(html_9dc40c23fb8543d451805f14dbe83bc9);
+                var html_d44b87586321fec2c0aeca1dc149f2ff = $(`<div id="html_d44b87586321fec2c0aeca1dc149f2ff" style="width: 100.0%; height: 100.0%;"><b>B. GROUP</b><br>Código CE: 595977<br>UBIGEO gestor: 070103<br>Latitud: -12.04137<br>Longitud: -77.09671<br>Alumnos: 632<br>Docentes: 54<br>Siniestros: 0</div>`)[0];
+                popup_83613d9cb8d23711d78ae49c3652cf20.setContent(html_d44b87586321fec2c0aeca1dc149f2ff);
             
         
 
-        circle_marker_818b46008e30588d16091f8cc134f2bd.bindPopup(popup_5f825f45327765cffaf5a43acec963c2)
+        circle_marker_26e698478af963e33dd065f1a22fc069.bindPopup(popup_83613d9cb8d23711d78ae49c3652cf20)
         ;
 
         
     
     
-            feature_group_8dd8ceef862b204bda207521fe940aa1.addTo(map_5a6df3da430b63bddd56224731c37a25);
+            circle_marker_26e698478af963e33dd065f1a22fc069.bindTooltip(
+                `<div>
+                     b. group | 595977
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
         
     
-            var feature_group_1679e0099a7872eb6bcd3e40f4fa8f17 = L.featureGroup(
+            feature_group_4f972d8d43b77253d9de3c92225d75bc.addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
+        
+    
+            var feature_group_aa4e528b5415e819e4e06c8c3977d482 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_b043ef974bb63c1a935b7511a67b023b = L.circleMarker(
+            var circle_marker_8920629da2c2a6439f16c73acb33c0ed = L.circleMarker(
                 [-12.03908971, -77.09487395265722],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_1679e0099a7872eb6bcd3e40f4fa8f17);
+            ).addTo(feature_group_aa4e528b5415e819e4e06c8c3977d482);
         
     
-        var popup_886230cb24a1a57dfaf4870209cf646c = L.popup({
+        var popup_45fe6da396f18d9063a008bf2252f319 = L.popup({
   "maxWidth": 420,
 });
 
         
             
-                var html_f078bce0e594bb6bcfe2f604ee4195a2 = $(`<div id="html_f078bce0e594bb6bcfe2f604ee4195a2" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-04-309</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>21/04/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>08:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. MORALES DUAREZ CARMEN DE LA LEGUA REYNOSO </td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.03908971</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.09487395265722</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>SE DETERMINO QUE EL PEATON ANTES MENCIONADO SUFRIA DE DEPRESION LO QUE HABRIA LLEVADO A TOMAR ESA DECISION FATAL DE ANZARSE A LOS NEUMATICOS DE UN VEHICULO EN MOVIMIENTO.</td></tr></table></div></div>`)[0];
-                popup_886230cb24a1a57dfaf4870209cf646c.setContent(html_f078bce0e594bb6bcfe2f604ee4195a2);
+                var html_cb3e596c813e3aca2e32f0566f441792 = $(`<div id="html_cb3e596c813e3aca2e32f0566f441792" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-04-309</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>21/04/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>08:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. MORALES DUAREZ CARMEN DE LA LEGUA REYNOSO </td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.03908971</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.09487395265722</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'>SE DETERMINO QUE EL PEATON ANTES MENCIONADO SUFRIA DE DEPRESION LO QUE HABRIA LLEVADO A TOMAR ESA DECISION FATAL DE ANZARSE A LOS NEUMATICOS DE UN VEHICULO EN MOVIMIENTO.</td></tr></table></div></div>`)[0];
+                popup_45fe6da396f18d9063a008bf2252f319.setContent(html_cb3e596c813e3aca2e32f0566f441792);
             
         
 
-        circle_marker_b043ef974bb63c1a935b7511a67b023b.bindPopup(popup_886230cb24a1a57dfaf4870209cf646c)
+        circle_marker_8920629da2c2a6439f16c73acb33c0ed.bindPopup(popup_45fe6da396f18d9063a008bf2252f319)
         ;
 
         
     
     
-            var circle_marker_0129a2a881daa7a7c1e479bf993c256a = L.circleMarker(
+            var circle_marker_093e1ce73605ffd5485ac63284b50d2e = L.circleMarker(
                 [-12.04746289, -77.0874816745895],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_1679e0099a7872eb6bcd3e40f4fa8f17);
+            ).addTo(feature_group_aa4e528b5415e819e4e06c8c3977d482);
         
     
-        var popup_aaa99902c28a31b877c3c4905c714f2f = L.popup({
+        var popup_836b9aaaee12d8efe9ffebe78dbf82dc = L.popup({
   "maxWidth": 420,
 });
 
         
             
-                var html_8b93e5f64e217716fed261747b77d315 = $(`<div id="html_8b93e5f64e217716fed261747b77d315" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-06-293</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/06/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>04:40</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. ARGENTINA CON AV. ENRIQUE MEIGGS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.04746289</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.0874816745895</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_aaa99902c28a31b877c3c4905c714f2f.setContent(html_8b93e5f64e217716fed261747b77d315);
+                var html_841f149764fb2cdb513aaaa37bb32bc7 = $(`<div id="html_841f149764fb2cdb513aaaa37bb32bc7" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-06-293</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/06/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>04:40</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. ARGENTINA CON AV. ENRIQUE MEIGGS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.04746289</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.0874816745895</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_836b9aaaee12d8efe9ffebe78dbf82dc.setContent(html_841f149764fb2cdb513aaaa37bb32bc7);
             
         
 
-        circle_marker_0129a2a881daa7a7c1e479bf993c256a.bindPopup(popup_aaa99902c28a31b877c3c4905c714f2f)
+        circle_marker_093e1ce73605ffd5485ac63284b50d2e.bindPopup(popup_836b9aaaee12d8efe9ffebe78dbf82dc)
         ;
 
         
     
     
-            var circle_marker_48fd166ed0fe55f4d3f13deb13c8da26 = L.circleMarker(
+            var circle_marker_6f18dfd11d7a2420bdc8c2347663f504 = L.circleMarker(
                 [-12.046767, -77.08469],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_1679e0099a7872eb6bcd3e40f4fa8f17);
+            ).addTo(feature_group_aa4e528b5415e819e4e06c8c3977d482);
         
     
-        var popup_f6d67fbfdc5bda6a12e9d03e87e0c575 = L.popup({
+        var popup_9f7ac83ef0df792e7f86c53611b381c7 = L.popup({
   "maxWidth": 420,
 });
 
         
             
-                var html_73a536203ca2ba98401965519947664c = $(`<div id="html_73a536203ca2ba98401965519947664c" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-03-212</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>04/03/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>14:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. ARGENTINA CDRA 07</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.046767</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.08469</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_f6d67fbfdc5bda6a12e9d03e87e0c575.setContent(html_73a536203ca2ba98401965519947664c);
+                var html_60fc6821cc6af4462a228ca6fb7e6cf0 = $(`<div id="html_60fc6821cc6af4462a228ca6fb7e6cf0" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-03-212</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>04/03/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>14:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. ARGENTINA CDRA 07</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.046767</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.08469</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_9f7ac83ef0df792e7f86c53611b381c7.setContent(html_60fc6821cc6af4462a228ca6fb7e6cf0);
             
         
 
-        circle_marker_48fd166ed0fe55f4d3f13deb13c8da26.bindPopup(popup_f6d67fbfdc5bda6a12e9d03e87e0c575)
+        circle_marker_6f18dfd11d7a2420bdc8c2347663f504.bindPopup(popup_9f7ac83ef0df792e7f86c53611b381c7)
         ;
 
         
     
     
-            var circle_marker_907f12c7366965b38fb9e8e40d6e080b = L.circleMarker(
+            var circle_marker_ec36c1588d4930be33b5718e39672537 = L.circleMarker(
                 [-12.04012851, -77.0934826487524],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_1679e0099a7872eb6bcd3e40f4fa8f17);
+            ).addTo(feature_group_aa4e528b5415e819e4e06c8c3977d482);
         
     
-        var popup_4017544921ff231fffd8de4cfa24d0b3 = L.popup({
+        var popup_d11560cc7836e3987a030e7eb239a20a = L.popup({
   "maxWidth": 420,
 });
 
         
             
-                var html_74552df43df50b06abe6e78c0b265ae9 = $(`<div id="html_74552df43df50b06abe6e78c0b265ae9" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-07-1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>04/07/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>18:10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 1ERO DE MAYO- CARMEN DE LA LEGUA REYNOSO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.04012851</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.0934826487524</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>OTRO (IMPRUDENCIA DEL CONDUCTOR)</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'>DESPLAZAR SU UNIDAD BAJO UN EXCESO DE CONFIANZA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_4017544921ff231fffd8de4cfa24d0b3.setContent(html_74552df43df50b06abe6e78c0b265ae9);
+                var html_a1adb7bfc8fcf980a8a04bcdcc2580a1 = $(`<div id="html_a1adb7bfc8fcf980a8a04bcdcc2580a1" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-07-1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>04/07/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>18:10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 1ERO DE MAYO- CARMEN DE LA LEGUA REYNOSO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-12.04012851</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-77.0934826487524</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>OTRO (IMPRUDENCIA DEL CONDUCTOR)</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'>DESPLAZAR SU UNIDAD BAJO UN EXCESO DE CONFIANZA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_d11560cc7836e3987a030e7eb239a20a.setContent(html_a1adb7bfc8fcf980a8a04bcdcc2580a1);
             
         
 
-        circle_marker_907f12c7366965b38fb9e8e40d6e080b.bindPopup(popup_4017544921ff231fffd8de4cfa24d0b3)
+        circle_marker_ec36c1588d4930be33b5718e39672537.bindPopup(popup_d11560cc7836e3987a030e7eb239a20a)
         ;
 
         
     
     
-            feature_group_1679e0099a7872eb6bcd3e40f4fa8f17.addTo(map_5a6df3da430b63bddd56224731c37a25);
+            feature_group_aa4e528b5415e819e4e06c8c3977d482.addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
         
     
-            map_5a6df3da430b63bddd56224731c37a25.fitBounds(
+            map_41b837c6fa2ae06ebe732d5c712426a1.fitBounds(
                 [[-12.04241, -77.09204], [-12.04198, -77.08676], [-12.04019, -77.09722], [-12.04136, -77.09052], [-12.04331, -77.09604], [-12.04456, -77.09701], [-12.03904, -77.09109], [-12.04327, -77.09718], [-12.03898, -77.09077], [-12.04056, -77.09428], [-12.04005, -77.09432], [-12.04161, -77.09655], [-12.03967, -77.09163], [-12.03997, -77.09629], [-12.04137, -77.09671]],
                 {}
             );
         
     
-            var layer_control_545efebd50f34fa150fdec406bee1593_layers = {
+            var layer_control_0b0e991579b9c053639195a2fcec6745_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_c29b0cfc3775497ac33823b44122c366,
+                    "openstreetmap" : tile_layer_f52634e0801dd3e7fdbf546f80f1e6f4,
                 },
                 overlays :  {
-                    "contorno" : feature_group_65acb6e7ac30d82661dc789918d56f5d,
-                    "colegios: buffers" : feature_group_b82d35171e54b1e4100b2ab1a2ec44a3,
-                    "colegios: puntos" : feature_group_8dd8ceef862b204bda207521fe940aa1,
-                    "siniestros fatales" : feature_group_1679e0099a7872eb6bcd3e40f4fa8f17,
+                    "contorno" : feature_group_7ce90fbc8c0cac1aaba485176733b06c,
+                    "colegios: buffers" : feature_group_bf85f88f0588e42606f871076cffdca4,
+                    "colegios: puntos" : feature_group_4f972d8d43b77253d9de3c92225d75bc,
+                    "siniestros fatales" : feature_group_aa4e528b5415e819e4e06c8c3977d482,
                 },
             };
-            let layer_control_545efebd50f34fa150fdec406bee1593 = L.control.layers(
-                layer_control_545efebd50f34fa150fdec406bee1593_layers.base_layers,
-                layer_control_545efebd50f34fa150fdec406bee1593_layers.overlays,
+            let layer_control_0b0e991579b9c053639195a2fcec6745 = L.control.layers(
+                layer_control_0b0e991579b9c053639195a2fcec6745_layers.base_layers,
+                layer_control_0b0e991579b9c053639195a2fcec6745_layers.overlays,
                 {
   "position": "topright",
   "collapsed": true,
   "autoZIndex": true,
 }
-            ).addTo(map_5a6df3da430b63bddd56224731c37a25);
+            ).addTo(map_41b837c6fa2ae06ebe732d5c712426a1);
 
         
     
-        feature_group_8dd8ceef862b204bda207521fe940aa1.bringToFront();
-        feature_group_1679e0099a7872eb6bcd3e40f4fa8f17.bringToFront();
+        feature_group_4f972d8d43b77253d9de3c92225d75bc.bringToFront();
+        feature_group_aa4e528b5415e819e4e06c8c3977d482.bringToFront();
+    
+    
+      (function() {
+        var puntosLayer = feature_group_4f972d8d43b77253d9de3c92225d75bc;
+        var defaultTrue  = '#7dd3fc';
+        var defaultFalse = '#1d4ed8';
+        var hiliteColor  = '#f59e0b';
+
+        // ---------- Toggle colapsar/expandir ----------
+        var box = document.getElementById('zs_tools');
+        var btnToggle = document.getElementById('btn_toggle_box');
+        var saved = null;
+        try { saved = localStorage.getItem('zs_tools_collapsed'); } catch(e) {}
+        if (saved === '1') {
+          box.classList.add('collapsed');
+          btnToggle.textContent = '⯈ Mostrar';
+        }
+        function toggleBox() {
+          var collapsed = box.classList.toggle('collapsed');
+          btnToggle.textContent = collapsed ? '⯈ Mostrar' : '⯆ Ocultar';
+          try { localStorage.setItem('zs_tools_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+        btnToggle.addEventListener('click', toggleBox);
+
+        // ---------- Esperar a que el mapa esté disponible ----------
+        var ly_map = null;
+        function ensureMap(cb) {
+          var tries = 0;
+          (function wait() {
+            ly_map = (puntosLayer && puntosLayer._map) ? puntosLayer._map : null;
+            if (ly_map) { cb(); return; }
+            if (tries++ < 80) { setTimeout(wait, 50); }
+          })();
+        }
+
+        ensureMap(function initTools() {
+          // ---------- Utilidades de búsqueda ----------
+          function eachMarker(fn) {
+            if (!puntosLayer || !puntosLayer._layers) return;
+            Object.values(puntosLayer._layers).forEach(function(ly) {
+              if (ly && typeof ly.setStyle === 'function') fn(ly);
+            });
+          }
+
+          function getTooltipText(ly) {
+            try {
+              var t = ly.getTooltip();
+              return t ? String(t.getContent() || '').toLowerCase() : '';
+            } catch(e) { return ''; }
+          }
+
+          function clearHighlights() {
+            eachMarker(function(ly) {
+              var st = (ly.options || {});
+              if (!st._origColor) { st._origColor = st.color; }
+              var orig = (st.color === hiliteColor) ? st._origColor : st.color;
+              ly.setStyle({ color: orig || defaultFalse, fillColor: orig || defaultFalse });
+            });
+          }
+
+          function searchAndHighlight() {
+            var qn_raw = (document.getElementById('q_name').value || '');
+            var qc_raw = (document.getElementById('q_code').value || '');
+            var qn = qn_raw.toLowerCase();
+            var qc = qc_raw.toLowerCase();
+
+            var useName = qn_raw.trim().length > 0;
+            var useCode = qc_raw.trim().length > 0;
+
+            clearHighlights();
+            if (!useName && !useCode) return;
+
+            var matchedLatLngs = [];
+            eachMarker(function(ly) {
+              var txt = getTooltipText(ly);
+              var parts = txt.split('|', 2);
+              var nameTxt = (parts[0] || '').trim();
+              var codeTxt = (parts[1] || '').trim();
+
+              var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+              var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+              if (matchName || matchCode) {
+                if (!ly.options._origColor) { ly.options._origColor = ly.options.color; }
+                ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+                if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+              }
+            });
+
+            if (matchedLatLngs.length > 0) {
+              var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+              try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+            }
+          }
+
+          document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+          document.getElementById('btn_clear').addEventListener('click', function() {
+            document.getElementById('q_name').value = '';
+            document.getElementById('q_code').value = '';
+            clearHighlights();
+          });
+          ['q_name','q_code'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+          });
+
+          // ---------- Pin por coordenadas ----------
+          var coordLayer = L.layerGroup().addTo(ly_map);
+          function goToXY() {
+            var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+            var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+            if (!isFinite(x) || !isFinite(y)) return;
+            coordLayer.clearLayers();
+            var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+            mk.addTo(coordLayer);
+            ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+          }
+          function clearXY() { coordLayer.clearLayers(); }
+          document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+          document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+          // ---------- Medición ----------
+          var measuring = false;
+          var mA = null, mB = null, mLine = null;
+
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2-lat1) * Math.PI/180;
+            var dLon = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2)*Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
+
+          function updateMeasure() {
+            if (!(mA && mB)) return;
+            var a = mA.getLatLng(), b = mB.getLatLng();
+            var d = haversine(a.lat, a.lng, b.lat, b.lng);
+            var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+            if (!mLine) {
+              mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+                .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+                .addTo(ly_map);
+            } else {
+              mLine.setLatLngs([a, b]);
+              mLine.setTooltipContent(txt);
+            }
+          }
+
+          function clearMeasure() {
+            if (mA) ly_map.removeLayer(mA); mA = null;
+            if (mB) ly_map.removeLayer(mB); mB = null;
+            if (mLine) ly_map.removeLayer(mLine); mLine = null;
+          }
+
+          function toggleMeasure() {
+            measuring = !measuring;
+            var stateSpan = document.getElementById('measure_state');
+            stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+            stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+            if (!measuring) {
+              clearMeasure();
+              ly_map.getContainer().style.cursor = '';
+              return;
+            }
+            ly_map.getContainer().style.cursor = 'crosshair';
+          }
+          document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+          ly_map.on('click', function(ev) {
+            if (!measuring) return;
+            if (!mA) {
+              mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+              mA.on('drag', updateMeasure);
+            } else if (!mB) {
+              mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+              mB.on('drag', updateMeasure);
+            } else {
+              mB.setLatLng(ev.latlng);
+            }
+            updateMeasure();
+          });
+
+          // ---------- Abrir vista actual en Google Maps ----------
+          function openInGoogleMaps() {
+            var c = ly_map.getCenter();
+            var z = ly_map.getZoom();
+            var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+            window.open(url, '_blank');
+          }
+          document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+        });
+      })();
     
 </script>
 </html>

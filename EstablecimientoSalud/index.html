@@ -15,7 +15,18 @@
       .container { max-width:1100px; margin:0 auto; padding:24px 16px; }
       h1 { margin-top:8px; font-size: clamp(22px, 3.2vw, 34px); }
       p  { font-size: clamp(14px, 2vw, 16px); line-height:1.6; }
-      .hero { width:100%; max-height:420px; object-fit:cover; border-radius:14px; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
+
+      /* >>> Parche hero sin recorte <<< */
+      .hero {
+        display:block;
+        width:100%;
+        height:auto;
+        max-height:80vh;
+        border-radius:14px;
+        box-shadow:0 6px 16px rgba(0,0,0,0.08);
+        object-fit:contain;
+      }
+
       .buttons { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 6px; }
       .btn {
         display:inline-block; padding:12px 16px; border-radius:12px;
@@ -38,7 +49,10 @@
       }
       .card h3 { margin:4px 0 10px; font-size:18px; }
       .card .row { display:flex; gap:10px; }
-      .card a, .card span.btn-like { flex:1; text-align:center; font-weight:600; padding:10px; border-radius:10px; text-decoration:none; display:inline-block; }
+      .card a, .card span.btn-like {
+        flex:1; text-align:center; font-weight:600; padding:10px;
+        border-radius:10px; text-decoration:none; display:inline-block;
+      }
       .dl { background:var(--dark); color:#fff; }
       .map { background:#ffffff; color:var(--blue); border:1px solid var(--blue); }
       .btn-like { background:#e5e7eb; color:#6b7280; border:1px solid #e5e7eb; }
@@ -50,6 +64,30 @@
       }
       .muted { color:#6b7280; font-size:13px; margin-top:4px; }
       footer { padding:18px; text-align:center; color:#6b7280; font-size:13px; }
+
+      /* ----- Barra de filtros ----- */
+      .filters {
+        display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+        background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.06); margin:12px 0;
+      }
+      .filters label { font-size:13px; color:#374151; }
+      .filters input {
+        flex: 1 1 200px;
+        border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; font-size:14px;
+      }
+      .filters .actions { display:flex; gap:8px; margin-left:auto; }
+      .filters .actions button {
+        border:0; border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer;
+      }
+      .filters .actions .primary { background: var(--dark); color:#fff; }
+      .filters .actions .accent  { background: var(--blue); color:#fff; }
+      .filters .actions .secondary { background:#e5e7eb; color:#111827; }
+
+      @media (max-width: 700px) {
+        .filters { gap:10px; }
+        .filters .actions { width:100%; justify-content:flex-end; flex-wrap:wrap; }
+      }
       @media (max-width: 480px) {
         .logo { height:40px; top:10px; }
       }
@@ -68,311 +106,448 @@
       <div class="container">
         <p>Se ha priorizado las siguientes municipalidades y establecimientos de salud en función a municipalidades con centros de salud on siniestros fatales en un radio de 100m de estos. Para esta edición se ha priorizado a los establecimientos de salud de primer nivel de atención.</p>
         <div style="margin:14px 0 18px;"><img class="hero" src="../assets/img/estab.jpg" alt="imagen"></div>
+
+        
+    <div class="filters">
+      <label>Departamento</label>
+      <input id="f_dep" type="text" placeholder="Ejem: Lima">
+      <label>Provincia</label>
+      <input id="f_prov" type="text" placeholder="Ejem: Lima">
+      <label>Distrito</label>
+      <input id="f_dist" type="text" placeholder="Ejem: San Juan de Lurigancho">
+      <label>UBIGEO</label>
+      <input id="f_ubi" type="text" placeholder="Ejem: 060101">
+
+      <div class="actions">
+        <button id="f_apply" class="primary">Buscar</button>
+        <button id="f_top" class="accent">Traer coincidencias arriba</button>
+        <button id="f_clear" class="secondary">Limpiar</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        function norm(s){
+          return (s || '').toLowerCase().replace(/\s+|_/g, '');
+        }
+        function getCards(){
+          var grid = document.querySelector('.grid');
+          return grid ? Array.from(grid.querySelectorAll('.card')) : [];
+        }
+        function ensureNormalizedAttrs(card){
+          ['data-dep','data-prov','data-dist','data-ubi'].forEach(function(attr){
+            var v = card.getAttribute(attr) || '';
+            card.setAttribute(attr, norm(v));
+          });
+        }
+        function matchCard(card, q){
+          var d = card.getAttribute('data-dep')  || '';
+          var p = card.getAttribute('data-prov') || '';
+          var t = card.getAttribute('data-dist') || '';
+          var u = card.getAttribute('data-ubi')  || '';
+          var ok = true;
+          if(q.dep  && d.indexOf(q.dep)  === -1) ok = false;
+          if(q.prov && p.indexOf(q.prov) === -1) ok = false;
+          if(q.dist && t.indexOf(q.dist) === -1) ok = false;
+          if(q.ubi  && u.indexOf(q.ubi)  === -1) ok = false;
+          return ok;
+        }
+        function queryValues(){
+          var dep  = document.getElementById('f_dep');
+          var prov = document.getElementById('f_prov');
+          var dist = document.getElementById('f_dist');
+          var ubi  = document.getElementById('f_ubi');
+          return { dep: norm(dep.value), prov: norm(prov.value), dist: norm(dist.value), ubi: norm(ubi.value) };
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+          var applyBtn = document.getElementById('f_apply');
+          var topBtn   = document.getElementById('f_top');
+          var clearBtn = document.getElementById('f_clear');
+
+          function applyHide(){
+            var q = queryValues();
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            cards.forEach(function(card){
+              card.style.display = matchCard(card, q) ? '' : 'none';
+            });
+          }
+
+          function bringTop(){
+            var q = queryValues();
+            var grid = document.querySelector('.grid');
+            if(!grid) return;
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            var matches = [], rest = [];
+            cards.forEach(function(card){
+              (matchCard(card, q) ? matches : rest).push(card);
+              card.style.display = ''; // mostrar todos, solo reordenar
+            });
+            matches.concat(rest).forEach(function(card){ grid.appendChild(card); });
+          }
+
+          function clearAll(){
+            var dep  = document.getElementById('f_dep');
+            var prov = document.getElementById('f_prov');
+            var dist = document.getElementById('f_dist');
+            var ubi  = document.getElementById('f_ubi');
+            dep.value = prov.value = dist.value = ubi.value = '';
+            getCards().forEach(function(card){ card.style.display = ''; });
+          }
+
+          applyBtn.addEventListener('click', applyHide);
+          topBtn.addEventListener('click', bringTop);
+          clearBtn.addEventListener('click', clearAll);
+
+          ['f_dep','f_prov','f_dist','f_ubi'].forEach(function(id){
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') applyHide(); });
+          });
+        });
+      })();
+    </script>
+    
+
         <div class="grid">
           
-          <div class="card">
+          <div class="card" data-dep="AMAZONAS" data-prov="CHACHAPOYAS" data-dist="CHACHAPOYAS" data-ubi="010101">
             <h3>AMAZONAS-CHACHAPOYAS-CHACHAPOYAS</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/AMAZONAS-CHACHAPOYAS-CHACHAPOYAS.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/AMAZONAS-CHACHAPOYAS-CHACHAPOYAS.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 010101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ANCASH" data-prov="SANTA" data-dist="CHIMBOTE" data-ubi="021801">
             <h3>ANCASH-SANTA-CHIMBOTE</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/ANCASH-SANTA-CHIMBOTE.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/ANCASH-SANTA-CHIMBOTE.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 021801</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="APURIMAC" data-prov="ABANCAY" data-dist="ABANCAY" data-ubi="030101">
             <h3>APURIMAC-ABANCAY-ABANCAY</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/APURIMAC-ABANCAY-ABANCAY.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/APURIMAC-ABANCAY-ABANCAY.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 030101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="APURIMAC" data-prov="ANDAHUAYLAS" data-dist="ANDAHUAYLAS" data-ubi="030201">
             <h3>APURIMAC-ANDAHUAYLAS-ANDAHUAYLAS</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/APURIMAC-ANDAHUAYLAS-ANDAHUAYLAS.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/APURIMAC-ANDAHUAYLAS-ANDAHUAYLAS.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 030201</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AREQUIPA" data-prov="AREQUIPA" data-dist="AREQUIPA" data-ubi="040101">
             <h3>AREQUIPA-AREQUIPA-AREQUIPA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/AREQUIPA-AREQUIPA-AREQUIPA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/AREQUIPA-AREQUIPA-AREQUIPA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 040101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUAMANGA" data-dist="AYACUCHO" data-ubi="050101">
             <h3>AYACUCHO-HUAMANGA-AYACUCHO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/AYACUCHO-HUAMANGA-AYACUCHO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/AYACUCHO-HUAMANGA-AYACUCHO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 050101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="AYACUCHO" data-prov="HUANTA" data-dist="HUANTA" data-ubi="050401">
             <h3>AYACUCHO-HUANTA-HUANTA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/AYACUCHO-HUANTA-HUANTA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/AYACUCHO-HUANTA-HUANTA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 050401</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CAJAMARCA" data-dist="CAJAMARCA" data-ubi="060101">
             <h3>CAJAMARCA-CAJAMARCA-CAJAMARCA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/CAJAMARCA-CAJAMARCA-CAJAMARCA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/CAJAMARCA-CAJAMARCA-CAJAMARCA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 060101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="CHOTA" data-dist="CHOTA" data-ubi="060401">
             <h3>CAJAMARCA-CHOTA-CHOTA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/CAJAMARCA-CHOTA-CHOTA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/CAJAMARCA-CHOTA-CHOTA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 060401</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CAJAMARCA" data-prov="JAEN" data-dist="JAEN" data-ubi="060801">
             <h3>CAJAMARCA-JAEN-JAEN</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/CAJAMARCA-JAEN-JAEN.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/CAJAMARCA-JAEN-JAEN.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 060801</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="CALLAO" data-prov="CALLAO" data-dist="CALLAO" data-ubi="070101">
             <h3>CALLAO-CALLAO-CALLAO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/CALLAO-CALLAO-CALLAO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/CALLAO-CALLAO-CALLAO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 070101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="HUANUCO" data-prov="HUANUCO" data-dist="HUANUCO" data-ubi="100101">
             <h3>HUANUCO-HUANUCO-HUANUCO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/HUANUCO-HUANUCO-HUANUCO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/HUANUCO-HUANUCO-HUANUCO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 100101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="ICA" data-prov="ICA" data-dist="ICA" data-ubi="110101">
             <h3>ICA-ICA-ICA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/ICA-ICA-ICA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/ICA-ICA-ICA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 110101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="HUANCAYO" data-dist="HUANCAYO" data-ubi="120101">
             <h3>JUNIN-HUANCAYO-HUANCAYO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/JUNIN-HUANCAYO-HUANCAYO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/JUNIN-HUANCAYO-HUANCAYO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 120101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="JUNIN" data-prov="YAULI" data-dist="LA_OROYA" data-ubi="120801">
             <h3>JUNIN-YAULI-LA OROYA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/JUNIN-YAULI-LA_OROYA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/JUNIN-YAULI-LA_OROYA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 120801</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="TRUJILLO" data-dist="TRUJILLO" data-ubi="130101">
             <h3>LA LIBERTAD-TRUJILLO-TRUJILLO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LA_LIBERTAD-TRUJILLO-TRUJILLO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LA_LIBERTAD-TRUJILLO-TRUJILLO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 130101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LA_LIBERTAD" data-prov="VIRU" data-dist="VIRU" data-ubi="131201">
             <h3>LA LIBERTAD-VIRU-VIRU</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LA_LIBERTAD-VIRU-VIRU.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LA_LIBERTAD-VIRU-VIRU.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 131201</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="CHICLAYO" data-dist="CHICLAYO" data-ubi="140101">
             <h3>LAMBAYEQUE-CHICLAYO-CHICLAYO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LAMBAYEQUE-CHICLAYO-CHICLAYO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LAMBAYEQUE-CHICLAYO-CHICLAYO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 140101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LAMBAYEQUE" data-prov="LAMBAYEQUE" data-dist="LAMBAYEQUE" data-ubi="140301">
             <h3>LAMBAYEQUE-LAMBAYEQUE-LAMBAYEQUE</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LAMBAYEQUE-LAMBAYEQUE-LAMBAYEQUE.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LAMBAYEQUE-LAMBAYEQUE-LAMBAYEQUE.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 140301</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="BARRANCA" data-dist="BARRANCA" data-ubi="150201">
             <h3>LIMA-BARRANCA-BARRANCA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LIMA-BARRANCA-BARRANCA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LIMA-BARRANCA-BARRANCA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 150201</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="HUAURA" data-dist="HUACHO" data-ubi="150801">
             <h3>LIMA-HUAURA-HUACHO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LIMA-HUAURA-HUACHO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LIMA-HUAURA-HUACHO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 150801</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LIMA" data-prov="LIMA" data-dist="LIMA" data-ubi="150101">
             <h3>LIMA-LIMA-LIMA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LIMA-LIMA-LIMA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LIMA-LIMA-LIMA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 150101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="LORETO" data-prov="MAYNAS" data-dist="IQUITOS" data-ubi="160101">
             <h3>LORETO-MAYNAS-IQUITOS</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/LORETO-MAYNAS-IQUITOS.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/LORETO-MAYNAS-IQUITOS.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 160101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="MADRE_DE_DIOS" data-prov="TAMBOPATA" data-dist="TAMBOPATA" data-ubi="170101">
             <h3>MADRE DE DIOS-TAMBOPATA-TAMBOPATA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/MADRE_DE_DIOS-TAMBOPATA-TAMBOPATA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/MADRE_DE_DIOS-TAMBOPATA-TAMBOPATA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 170101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="MOQUEGUA" data-prov="ILO" data-dist="ILO" data-ubi="180301">
             <h3>MOQUEGUA-ILO-ILO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/MOQUEGUA-ILO-ILO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/MOQUEGUA-ILO-ILO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 180301</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PIURA" data-prov="PIURA" data-dist="PIURA" data-ubi="200101">
             <h3>PIURA-PIURA-PIURA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/PIURA-PIURA-PIURA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/PIURA-PIURA-PIURA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 200101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="EL_COLLAO" data-dist="ILAVE" data-ubi="210501">
             <h3>PUNO-EL COLLAO-ILAVE</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/PUNO-EL_COLLAO-ILAVE.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/PUNO-EL_COLLAO-ILAVE.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 210501</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="PUNO" data-dist="PUNO" data-ubi="210101">
             <h3>PUNO-PUNO-PUNO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/PUNO-PUNO-PUNO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/PUNO-PUNO-PUNO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 210101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="PUNO" data-prov="SAN_ROMAN" data-dist="JULIACA" data-ubi="211101">
             <h3>PUNO-SAN ROMAN-JULIACA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/PUNO-SAN_ROMAN-JULIACA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/PUNO-SAN_ROMAN-JULIACA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 211101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="MOYOBAMBA" data-dist="MOYOBAMBA" data-ubi="220101">
             <h3>SAN MARTIN-MOYOBAMBA-MOYOBAMBA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/SAN_MARTIN-MOYOBAMBA-MOYOBAMBA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/SAN_MARTIN-MOYOBAMBA-MOYOBAMBA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 220101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="SAN_MARTIN" data-prov="SAN_MARTIN" data-dist="TARAPOTO" data-ubi="220901">
             <h3>SAN MARTIN-SAN MARTIN-TARAPOTO</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/SAN_MARTIN-SAN_MARTIN-TARAPOTO.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/SAN_MARTIN-SAN_MARTIN-TARAPOTO.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 220901</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="TACNA" data-prov="TACNA" data-dist="TACNA" data-ubi="230101">
             <h3>TACNA-TACNA-TACNA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/TACNA-TACNA-TACNA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/TACNA-TACNA-TACNA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 230101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="TUMBES" data-prov="TUMBES" data-dist="TUMBES" data-ubi="240101">
             <h3>TUMBES-TUMBES-TUMBES</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/TUMBES-TUMBES-TUMBES.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/TUMBES-TUMBES-TUMBES.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 240101</div>
           </div>
         
 
-          <div class="card">
+          <div class="card" data-dep="UCAYALI" data-prov="CORONEL_PORTILLO" data-dist="CALLERIA" data-ubi="250101">
             <h3>UCAYALI-CORONEL PORTILLO-CALLERIA</h3>
             <div class="row">
               <a class="dl" href="../EstablecimientoSalud/excels/UCAYALI-CORONEL_PORTILLO-CALLERIA.xlsx" download>Descargar Excel</a>
               <a class="map" href="../EstablecimientoSalud/maps/UCAYALI-CORONEL_PORTILLO-CALLERIA.html" target="_blank" rel="noopener">Abrir mapa</a>
             </div>
+            <div class="muted">UBIGEO: 250101</div>
           </div>
         
         </div>

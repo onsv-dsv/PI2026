@@ -4,9 +4,9 @@ build_site.py
 
 Genera:
 - /index.html                      (portada)
-- /ZonasEscolares/index.html       (listado de excels y mapas)
-- /Intersecciones/index.html       (listado de excels y mapas)
-- /EstablecimientoSalud/index.html (listado de excels y mapas)
+- /ZonasEscolares/index.html       (listado de excels y mapas + filtros)
+- /Intersecciones/index.html       (listado de excels y mapas + filtros, con UBIGEO desde catálogo)
+- /EstablecimientoSalud/index.html (listado de excels y mapas + filtros, con UBIGEO desde catálogo)
 
 Lee:
 - content/home_title.txt,  content/home_body.txt
@@ -14,14 +14,14 @@ Lee:
 - content/inter_title.txt, content/inter_body.txt
 - content/estab_title.txt, content/estab_body.txt
 - assets/img/logo.jpg, assets/img/home.jpg, assets/img/zonas.jpg, assets/img/inter.jpg, assets/img/estab.jpg
-- data/municipalidades_catalog.csv (para Zonas)
+- data/municipalidades_catalog.csv (para Zonas y para mapear UBIGEO en Inter/Estab)
 
 Reglas:
 - En Zonas/Intersecciones/Establecimientos: botón ← Regresar; Excel descarga; Mapa abre en nueva pestaña.
 - Zonas: usa catálogo y SOLO lista filas cuyo Excel exista.
-- Intersecciones: escanea /Intersecciones/excels.
-- Establecimientos de Salud: escanea /EstablecimientoSalud/excels.
+- Intersecciones y Establecimientos: escanean /<sección>/excels y buscan UBIGEO en el catálogo por slug (y fallback por componentes).
 - Si el mapa no existe, el botón aparece deshabilitado.
+- Filtros: Departamento + Provincia + Distrito + UBIGEO (AND). Comparación ignora espacios y guiones bajos.
 """
 
 from pathlib import Path
@@ -69,7 +69,7 @@ def ensure_dirs():
     ESTAB_DIR.mkdir(parents=True, exist_ok=True)
 
 def css_block():
-    # Colores para botones: zonas (verde), inter (naranja), estab (azul)
+    # Parche: imágenes hero SIN recorte + estilos del filtro y botones.
     return """
     <style>
       :root {
@@ -83,7 +83,18 @@ def css_block():
       .container { max-width:1100px; margin:0 auto; padding:24px 16px; }
       h1 { margin-top:8px; font-size: clamp(22px, 3.2vw, 34px); }
       p  { font-size: clamp(14px, 2vw, 16px); line-height:1.6; }
-      .hero { width:100%; max-height:420px; object-fit:cover; border-radius:14px; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
+
+      /* >>> Parche hero sin recorte <<< */
+      .hero {
+        display:block;
+        width:100%;
+        height:auto;
+        max-height:80vh;
+        border-radius:14px;
+        box-shadow:0 6px 16px rgba(0,0,0,0.08);
+        object-fit:contain;
+      }
+
       .buttons { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 6px; }
       .btn {
         display:inline-block; padding:12px 16px; border-radius:12px;
@@ -106,7 +117,10 @@ def css_block():
       }
       .card h3 { margin:4px 0 10px; font-size:18px; }
       .card .row { display:flex; gap:10px; }
-      .card a, .card span.btn-like { flex:1; text-align:center; font-weight:600; padding:10px; border-radius:10px; text-decoration:none; display:inline-block; }
+      .card a, .card span.btn-like {
+        flex:1; text-align:center; font-weight:600; padding:10px;
+        border-radius:10px; text-decoration:none; display:inline-block;
+      }
       .dl { background:var(--dark); color:#fff; }
       .map { background:#ffffff; color:var(--blue); border:1px solid var(--blue); }
       .btn-like { background:#e5e7eb; color:#6b7280; border:1px solid #e5e7eb; }
@@ -118,6 +132,30 @@ def css_block():
       }
       .muted { color:#6b7280; font-size:13px; margin-top:4px; }
       footer { padding:18px; text-align:center; color:#6b7280; font-size:13px; }
+
+      /* ----- Barra de filtros ----- */
+      .filters {
+        display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+        background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.06); margin:12px 0;
+      }
+      .filters label { font-size:13px; color:#374151; }
+      .filters input {
+        flex: 1 1 200px;
+        border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; font-size:14px;
+      }
+      .filters .actions { display:flex; gap:8px; margin-left:auto; }
+      .filters .actions button {
+        border:0; border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer;
+      }
+      .filters .actions .primary { background: var(--dark); color:#fff; }
+      .filters .actions .accent  { background: var(--blue); color:#fff; }
+      .filters .actions .secondary { background:#e5e7eb; color:#111827; }
+
+      @media (max-width: 700px) {
+        .filters { gap:10px; }
+        .filters .actions { width:100%; justify-content:flex-end; flex-wrap:wrap; }
+      }
       @media (max-width: 480px) {
         .logo { height:40px; top:10px; }
       }
@@ -135,9 +173,118 @@ def header_block(title_text: str, base_prefix: str = "") -> str:
     </header>
     """
 
+def hero_img_html(base_prefix: str, path: Path, alt: str) -> str:
+    return f'<img class="hero" src="{base_prefix}{path.as_posix()}" alt="{esc(alt)}">' if path.exists() else ""
+
+# ---------- Filtros (UI + JS) ----------
+def filters_block() -> str:
+    # Script espera DOMContentLoaded y recoge tarjetas en cada acción.
+    return """
+    <div class="filters">
+      <label>Departamento</label>
+      <input id="f_dep" type="text" placeholder="Ejem: Lima">
+      <label>Provincia</label>
+      <input id="f_prov" type="text" placeholder="Ejem: Lima">
+      <label>Distrito</label>
+      <input id="f_dist" type="text" placeholder="Ejem: San Juan de Lurigancho">
+      <label>UBIGEO</label>
+      <input id="f_ubi" type="text" placeholder="Ejem: 060101">
+
+      <div class="actions">
+        <button id="f_apply" class="primary">Buscar</button>
+        <button id="f_top" class="accent">Traer coincidencias arriba</button>
+        <button id="f_clear" class="secondary">Limpiar</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        function norm(s){
+          return (s || '').toLowerCase().replace(/\\s+|_/g, '');
+        }
+        function getCards(){
+          var grid = document.querySelector('.grid');
+          return grid ? Array.from(grid.querySelectorAll('.card')) : [];
+        }
+        function ensureNormalizedAttrs(card){
+          ['data-dep','data-prov','data-dist','data-ubi'].forEach(function(attr){
+            var v = card.getAttribute(attr) || '';
+            card.setAttribute(attr, norm(v));
+          });
+        }
+        function matchCard(card, q){
+          var d = card.getAttribute('data-dep')  || '';
+          var p = card.getAttribute('data-prov') || '';
+          var t = card.getAttribute('data-dist') || '';
+          var u = card.getAttribute('data-ubi')  || '';
+          var ok = true;
+          if(q.dep  && d.indexOf(q.dep)  === -1) ok = false;
+          if(q.prov && p.indexOf(q.prov) === -1) ok = false;
+          if(q.dist && t.indexOf(q.dist) === -1) ok = false;
+          if(q.ubi  && u.indexOf(q.ubi)  === -1) ok = false;
+          return ok;
+        }
+        function queryValues(){
+          var dep  = document.getElementById('f_dep');
+          var prov = document.getElementById('f_prov');
+          var dist = document.getElementById('f_dist');
+          var ubi  = document.getElementById('f_ubi');
+          return { dep: norm(dep.value), prov: norm(prov.value), dist: norm(dist.value), ubi: norm(ubi.value) };
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+          var applyBtn = document.getElementById('f_apply');
+          var topBtn   = document.getElementById('f_top');
+          var clearBtn = document.getElementById('f_clear');
+
+          function applyHide(){
+            var q = queryValues();
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            cards.forEach(function(card){
+              card.style.display = matchCard(card, q) ? '' : 'none';
+            });
+          }
+
+          function bringTop(){
+            var q = queryValues();
+            var grid = document.querySelector('.grid');
+            if(!grid) return;
+            var cards = getCards();
+            cards.forEach(ensureNormalizedAttrs);
+            var matches = [], rest = [];
+            cards.forEach(function(card){
+              (matchCard(card, q) ? matches : rest).push(card);
+              card.style.display = ''; // mostrar todos, solo reordenar
+            });
+            matches.concat(rest).forEach(function(card){ grid.appendChild(card); });
+          }
+
+          function clearAll(){
+            var dep  = document.getElementById('f_dep');
+            var prov = document.getElementById('f_prov');
+            var dist = document.getElementById('f_dist');
+            var ubi  = document.getElementById('f_ubi');
+            dep.value = prov.value = dist.value = ubi.value = '';
+            getCards().forEach(function(card){ card.style.display = ''; });
+          }
+
+          applyBtn.addEventListener('click', applyHide);
+          topBtn.addEventListener('click', bringTop);
+          clearBtn.addEventListener('click', clearAll);
+
+          ['f_dep','f_prov','f_dist','f_ubi'].forEach(function(id){
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') applyHide(); });
+          });
+        });
+      })();
+    </script>
+    """
+
+# ---------- HTML pages ----------
 def home_html(title_text: str, body_text: str) -> str:
     base = ""  # raíz
-    hero_html = f'<img class="hero" src="{base}{HOME_IMG.as_posix()}" alt="imagen">' if HOME_IMG.exists() else ""
+    hero_html = hero_img_html(base, HOME_IMG, "imagen")
     return f"""
     <!doctype html><html lang="es"><head>
       <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -160,7 +307,7 @@ def home_html(title_text: str, body_text: str) -> str:
 
 def zonas_html(title_text: str, body_text: str, items: list) -> str:
     base = "../"  # /ZonasEscolares/
-    hero_html = f'<img class="hero" src="{base}{ZONAS_IMG.as_posix()}" alt="zonas">' if ZONAS_IMG.exists() else ""
+    hero_html = hero_img_html(base, ZONAS_IMG, "zonas")
     cards = []
     for it in items:
         titulo    = esc(it.get("titulo") or it.get("slug") or it.get("ubigeo") or "")
@@ -169,19 +316,26 @@ def zonas_html(title_text: str, body_text: str, items: list) -> str:
         has_excel = bool(it.get("has_excel"))
         has_map   = bool(it.get("has_map"))
 
+        data_dep  = esc(it.get("data_dep",""))
+        data_prov = esc(it.get("data_prov",""))
+        data_dist = esc(it.get("data_dist",""))
+        data_ubi  = esc(it.get("data_ubi",""))
+
         excel_btn = (f'<a class="dl" href="{excel_rel}" download>Descargar Excel</a>'
                      if has_excel else '<span class="btn-like disabled">Sin Excel</span>')
         map_btn   = (f'<a class="map" href="{mapa_rel}" target="_blank" rel="noopener">Abrir mapa</a>'
                      if has_map else '<span class="btn-like disabled">Mapa no disponible</span>')
 
+        detail_html = f'<div class="muted">UBIGEO: {data_ubi}</div>' if data_ubi else ''
+
         cards.append(f"""
-          <div class="card">
+          <div class="card" data-dep="{data_dep}" data-prov="{data_prov}" data-dist="{data_dist}" data-ubi="{data_ubi}">
             <h3>{titulo}</h3>
             <div class="row">
               {excel_btn}
               {map_btn}
             </div>
-            <div class="muted">{esc(it.get("detalle") or "")}</div>
+            {detail_html}
           </div>
         """)
     cards_html = "\n".join(cards)
@@ -196,6 +350,9 @@ def zonas_html(title_text: str, body_text: str, items: list) -> str:
       <div class="container">
         <p>{esc(body_text)}</p>
         <div style="margin:14px 0 18px;">{hero_html}</div>
+
+        {filters_block()}
+
         <div class="grid">
           {cards_html}
         </div>
@@ -205,8 +362,7 @@ def zonas_html(title_text: str, body_text: str, items: list) -> str:
     """
 
 def list_page_html(title_text: str, body_text: str, items: list, hero_img_path: Path, base="../"):
-    """Plantilla genérica para Intersecciones/Establecimientos: escanea excels y muestra tarjetas."""
-    hero_html = f'<img class="hero" src="{base}{hero_img_path.as_posix()}" alt="imagen">' if hero_img_path.exists() else ""
+    hero_html = hero_img_html(base, hero_img_path, "imagen")
     cards = []
     for it in items:
         titulo    = esc(it.get("titulo") or it.get("slug") or it.get("ubigeo") or it.get("name") or "")
@@ -215,18 +371,27 @@ def list_page_html(title_text: str, body_text: str, items: list, hero_img_path: 
         has_excel = bool(it.get("has_excel"))
         has_map   = bool(it.get("has_map"))
 
+        data_dep  = esc(it.get("data_dep",""))
+        data_prov = esc(it.get("data_prov",""))
+        data_dist = esc(it.get("data_dist",""))
+        data_ubi  = esc(it.get("data_ubi",""))  # ahora poblado desde catálogo
+
         excel_btn = (f'<a class="dl" href="{excel_rel}" download>Descargar Excel</a>'
                      if has_excel else '<span class="btn-like disabled">Sin Excel</span>')
         map_btn   = (f'<a class="map" href="{mapa_rel}" target="_blank" rel="noopener">Abrir mapa</a>'
                      if has_map else '<span class="btn-like disabled">Mapa no disponible</span>')
 
+        # << NUEVO >> Mostrar UBIGEO en la tarjeta (igual que Zonas)
+        detail_html = f'<div class="muted">UBIGEO: {data_ubi}</div>' if data_ubi else ''
+
         cards.append(f"""
-          <div class="card">
+          <div class="card" data-dep="{data_dep}" data-prov="{data_prov}" data-dist="{data_dist}" data-ubi="{data_ubi}">
             <h3>{titulo}</h3>
             <div class="row">
               {excel_btn}
               {map_btn}
             </div>
+            {detail_html}
           </div>
         """)
     cards_html = "\n".join(cards)
@@ -241,6 +406,9 @@ def list_page_html(title_text: str, body_text: str, items: list, hero_img_path: 
       <div class="container">
         <p>{esc(body_text)}</p>
         <div style="margin:14px 0 18px;">{hero_html}</div>
+
+        {filters_block()}
+
         <div class="grid">
           {cards_html}
         </div>
@@ -249,7 +417,58 @@ def list_page_html(title_text: str, body_text: str, items: list, hero_img_path: 
     </body></html>
     """
 
-# ---------- Carga catálogo & prepara items ----------
+# ---------- Normalización / helpers ----------
+def _split_slug(name: str):
+    # name tipo "DEPARTAMENTO-PROVINCIA-DISTRITO" (puede traer _ en el distrito)
+    parts = (name or "").split("-")
+    dep  = parts[0] if len(parts) > 0 else ""
+    prov = parts[1] if len(parts) > 1 else ""
+    dist = parts[2] if len(parts) > 2 else ""
+    return dep, prov, dist
+
+def _norm_for_key(s: str) -> str:
+    # minúsculas y sin espacios/guiones bajos para comparación robusta
+    return (s or "").lower().replace(" ", "").replace("_", "")
+
+def _key_from_parts(dep: str, prov: str, dist: str) -> str:
+    return "|".join([_norm_for_key(dep), _norm_for_key(prov), _norm_for_key(dist)])
+
+# ---------- Índices de catálogo para UBIGEO ----------
+def _load_catalog_index():
+    """
+    Devuelve dos índices:
+      - idx_slug:   { slug_lower : ubigeo }
+      - idx_parts:  { "dep|prov|dist" (normalizado) : ubigeo }
+    """
+    if not CATALOG_CSV.exists():
+        return {}, {}
+    df = pd.read_csv(CATALOG_CSV, dtype=str).fillna("")
+    if "slug" not in df.columns:
+        df["slug"] = ""
+    if "ubigeo" not in df.columns:
+        df["ubigeo"] = ""
+
+    idx_slug = {}
+    idx_parts = {}
+    for _, r in df.iterrows():
+        slug = (r.get("slug") or "").strip()
+        ubi  = (r.get("ubigeo") or "").strip()
+        if slug:
+            idx_slug[slug.lower()] = ubi
+            dep, prov, dist = _split_slug(slug)
+            key = _key_from_parts(dep, prov, dist)
+            idx_parts[key] = ubi
+        else:
+            # Si no hay slug, intenta con columnas depart/prov/dist si existen
+            dep = (r.get("departamento") or "").strip()
+            prov = (r.get("provincia") or "").strip()
+            dist = (r.get("distrito") or "").strip()
+            if any([dep, prov, dist]):
+                key = _key_from_parts(dep, prov, dist)
+                idx_parts[key] = ubi
+    return idx_slug, idx_parts
+
+# ---------- Carga catálogo & prepara items (ZONAS) ----------
 def load_catalog_zonas():
     if not CATALOG_CSV.exists():
         raise FileNotFoundError(f"No se encuentra {CATALOG_CSV}")
@@ -282,10 +501,11 @@ def load_catalog_zonas():
         parts = [row.get("departamento","").strip(), row.get("provincia","").strip(), row.get("distrito","").strip()]
         parts = [p for p in parts if p]
         if parts: return " - ".join(parts)
-        if row.get("slug"): return row["slug"]
+        if row.get("slug"): return row["slug"].replace("_", " ")
         return row.get("ubigeo", "")
     df["title"] = df.apply(mk_title, axis=1)
 
+    # Ordenamiento
     df["_dep"]  = df["departamento"].str.normalize('NFKD')
     df["_prov"] = df["provincia"].str.normalize('NFKD')
     df["_dist"] = df["distrito"].str.normalize('NFKD')
@@ -300,6 +520,10 @@ def load_catalog_zonas():
             excel_rel = f"../{excel_rel}"
         if not mapa_rel.startswith("../"):
             mapa_rel = f"../{mapa_rel}"
+
+        sugg = r.get("slug") or f"{r.get('departamento','')}-{r.get('provincia','')}-{r.get('distrito','')}"
+        dep, prov, dist = _split_slug(sugg)
+
         items.append({
             "titulo": r["title"],
             "slug": r["slug"],
@@ -308,23 +532,44 @@ def load_catalog_zonas():
             "mapa_rel": mapa_rel,
             "has_excel": bool(r["has_excel"]),
             "has_map":   bool(r["has_map"]),
-            "detalle": f"UBIGEO: {r['ubigeo']}" if r["ubigeo"] else ""
+            "detalle": f"UBIGEO: {r['ubigeo']}" if r["ubigeo"] else "",
+            "data_dep":  dep,
+            "data_prov": prov,
+            "data_dist": dist,
+            "data_ubi":  r.get("ubigeo","") or "",
         })
     return items
 
-def _scan_items_generic(base_dir: Path, section: str):
-    """Escanea /<section>/excels y arma items; deshabilita mapa si no existe."""
+# ---------- Escaneo genérico (Inter/Estab) con mapeo UBIGEO desde catálogo ----------
+def _scan_items_generic(base_dir: Path, section: str, idx_slug: dict, idx_parts: dict):
+    """
+    Escanea /<section>/excels y arma items; deshabilita mapa si no existe.
+    Deriva dep/prov/dist del nombre; intenta obtener UBIGEO desde catálogo:
+      1) Búsqueda por slug exacto (minúsculas).
+      2) Fallback por clave "dep|prov|dist" normalizada.
+    """
     excels_dir = base_dir / "excels"
-    maps_dir   = base_dir / "maps"
     items = []
     if excels_dir.exists():
         for x in sorted(excels_dir.glob("*.xlsx")):
-            name = x.stem  # p.ej. UCAYALI-CORONEL_PORTILLO-MANANTAY
+            name = x.stem  # p.ej. DEPARTAMENTO-PROVINCIA-DISTRITO (con _ en el distrito)
             excel_rel = f"../{section}/excels/{x.name}"
             mapa_rel  = f"../{section}/maps/{name}.html"
             has_excel = True
             has_map   = (ROOT / section / "maps" / f"{name}.html").exists()
             titulo = name.replace("_", " ")
+
+            dep, prov, dist = _split_slug(name)
+
+            # UBIGEO desde catálogo
+            ubi = ""
+            slug_lower = name.lower()
+            if slug_lower in idx_slug:
+                ubi = idx_slug[slug_lower]
+            else:
+                key = _key_from_parts(dep, prov, dist)
+                ubi = idx_parts.get(key, "")
+
             items.append({
                 "titulo": titulo,
                 "name": name,
@@ -332,14 +577,20 @@ def _scan_items_generic(base_dir: Path, section: str):
                 "mapa_rel":  mapa_rel,
                 "has_excel": has_excel,
                 "has_map":   has_map,
+                "data_dep":  dep,
+                "data_prov": prov,
+                "data_dist": dist,
+                "data_ubi":  ubi,   # <- ahora poblado
             })
     return items
 
 def load_items_inter():
-    return _scan_items_generic(INTER_DIR, "Intersecciones")
+    idx_slug, idx_parts = _load_catalog_index()
+    return _scan_items_generic(INTER_DIR, "Intersecciones", idx_slug, idx_parts)
 
 def load_items_estab():
-    return _scan_items_generic(ESTAB_DIR, "EstablecimientoSalud")
+    idx_slug, idx_parts = _load_catalog_index()
+    return _scan_items_generic(ESTAB_DIR, "EstablecimientoSalud", idx_slug, idx_parts)
 
 # ---------- Build ----------
 def build_home():

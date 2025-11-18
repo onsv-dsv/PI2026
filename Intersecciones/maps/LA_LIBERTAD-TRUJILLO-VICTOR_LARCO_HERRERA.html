@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_707063178d904f651ae8585552e8310c {
+                #map_0c2f90ccaecfd495c2b81561637da184 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,6 +56,38 @@
     
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        border: 1px solid #e5e7eb;
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display: flex; flex-direction: column; gap: 8px; min-width: 300px; max-width: 92vw;
+      }
+
+      .searchbar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .searchbar-title { font-weight: 700; font-size: 14px; color: #111827; }
+      .toggle-btn { border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; background: #111827; color: #fff; }
+      .tools-body { display: flex; flex-direction: column; gap: 8px; }
+
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input { border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1; }
+      .row-flex button, .col-flex button { border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer; }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line { background: rgba(17,24,39,0.85); color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+
+      .searchbar-wrap.collapsed { padding: 8px 10px; }
+      .searchbar-wrap.collapsed .tools-body { display: none; }
+
+      @media (max-width: 480px) {
+        .searchbar-wrap { right: 12px; bottom: 12px; min-width: 240px; }
+      }
     </style>
     
     
@@ -69,11 +101,11 @@
     </div>
     
     
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
@@ -83,17 +115,60 @@
             <span style="display:inline-block; width:14px; height:14px; background:#d90429; border-radius:50%;"></span>
             <span>Rojo: Siniestro fatal</span>
         </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+            <span style="display:inline-block; width:14px; height:14px; background:#f59e0b; border-radius:50%;"></span>
+            <span>Amarillo: Coincidencia de búsqueda</span>
+        </div>
     </div>
     
     
-            <div class="folium-map" id="map_707063178d904f651ae8585552e8310c" ></div>
+            <div class="folium-map" id="map_0c2f90ccaecfd495c2b81561637da184" ></div>
         
+    
+      <div class="searchbar-wrap" id="zs_tools">
+        <div class="searchbar-header">
+          <div class="searchbar-title">Herramientas</div>
+          <button id="btn_toggle_box" class="toggle-btn" title="Mostrar/Ocultar">⯆ Ocultar</button>
+        </div>
+
+        <div class="tools-body">
+          <div class="col-flex">
+            <input id="q_name" type="text" placeholder="Buscar por nombre">
+            <input id="q_code" type="text" placeholder="Buscar por código">
+          </div>
+          <div class="row-flex">
+            <button id="btn_search" class="btn-dark">Buscar</button>
+            <button id="btn_clear" class="btn-gray">Limpiar</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+
+          <div class="col-flex" title="Coordenadas en grados decimales">
+            <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+            <div class="row-flex">
+              <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+              <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+              <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+            <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+          </div>
+        </div>
+      </div>
+    
 </body>
 <script>
     
     
-            var map_707063178d904f651ae8585552e8310c = L.map(
-                "map_707063178d904f651ae8585552e8310c",
+            var map_0c2f90ccaecfd495c2b81561637da184 = L.map(
+                "map_0c2f90ccaecfd495c2b81561637da184",
                 {
                     center: [-8.135385507692307, -79.05089135384615],
                     crs: L.CRS.EPSG3857,
@@ -105,13 +180,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_707063178d904f651ae8585552e8310c);
+            L.control.scale().addTo(map_0c2f90ccaecfd495c2b81561637da184);
 
             
 
         
     
-            var tile_layer_84b489c7b6d65309625b24a53f071991 = L.tileLayer(
+            var tile_layer_10564fc2347e7110a61f43bf87f64db7 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -128,852 +203,1188 @@
             );
         
     
-            tile_layer_84b489c7b6d65309625b24a53f071991.addTo(map_707063178d904f651ae8585552e8310c);
+            tile_layer_10564fc2347e7110a61f43bf87f64db7.addTo(map_0c2f90ccaecfd495c2b81561637da184);
         
     
-            var feature_group_fe8f87328a48b797f549b39e7d92f567 = L.featureGroup(
+            var feature_group_d4fe386a37ae939058ec4731e375784e = L.featureGroup(
                 {
 }
             );
         
     
-        function geo_json_0299efc70be1437c15112456643d30a8_styler(feature) {
+        function geo_json_69debb5236d046f6758987064860c2d7_styler(feature) {
             switch(feature.properties.IDDPTO) {
                 default:
-                    return {"color": "#222222", "fill": true, "fillColor": "#FFA500", "fillOpacity": 0.6, "opacity": 1.0, "weight": 2.5};
+                    return {"color": "#222222", "fill": true, "fillColor": "#9ca3af", "fillOpacity": 0.3, "opacity": 1.0, "weight": 2.5};
             }
         }
 
-        function geo_json_0299efc70be1437c15112456643d30a8_onEachFeature(feature, layer) {
+        function geo_json_69debb5236d046f6758987064860c2d7_onEachFeature(feature, layer) {
 
             layer.on({
             });
         };
-        var geo_json_0299efc70be1437c15112456643d30a8 = L.geoJson(null, {
-                onEachFeature: geo_json_0299efc70be1437c15112456643d30a8_onEachFeature,
+        var geo_json_69debb5236d046f6758987064860c2d7 = L.geoJson(null, {
+                onEachFeature: geo_json_69debb5236d046f6758987064860c2d7_onEachFeature,
             
-                style: geo_json_0299efc70be1437c15112456643d30a8_styler,
+                style: geo_json_69debb5236d046f6758987064860c2d7_styler,
             ...{
 }
         });
 
-        function geo_json_0299efc70be1437c15112456643d30a8_add (data) {
-            geo_json_0299efc70be1437c15112456643d30a8
+        function geo_json_69debb5236d046f6758987064860c2d7_add (data) {
+            geo_json_69debb5236d046f6758987064860c2d7
                 .addData(data);
         }
-            geo_json_0299efc70be1437c15112456643d30a8_add({"features": [{"geometry": {"coordinates": [[[[-79.04637498799991, -8.12591785099994], [-79.04262498799989, -8.129173850999962], [-79.04127536299995, -8.127617226999917], [-79.04041986299995, -8.128326225999956], [-79.03901561399994, -8.12882422599995], [-79.0382304879999, -8.129095725999946], [-79.03600786299995, -8.129861350999875], [-79.03525586299997, -8.13018560099988], [-79.02930073799996, -8.135531225999955], [-79.02741986299992, -8.137294975999964], [-79.02740623899996, -8.140161975999945], [-79.02737298799997, -8.143160100999978], [-79.0267283629999, -8.151256225999873], [-79.02780473799999, -8.151310600999864], [-79.02835348799988, -8.15190235199998], [-79.02865036299994, -8.152408225999977], [-79.02877536299997, -8.152833975999954], [-79.02902536299996, -8.153695350999897], [-79.02927536299995, -8.15468947699992], [-79.02962498799997, -8.155378850999853], [-79.03000598799991, -8.155734350999978], [-79.03037498799989, -8.156015600999979], [-79.03059173899999, -8.156324225999981], [-79.03073436299997, -8.156921850999879], [-79.03087698799999, -8.15742772599998], [-79.03117186299994, -8.158289100999923], [-79.0315429879999, -8.158570350999923], [-79.03244723799997, -8.159279350999896], [-79.03280661299993, -8.159634725999979], [-79.03307811299993, -8.15978122699994], [-79.0332422379999, -8.159808600999895], [-79.03332423799998, -8.159681600999875], [-79.03330861299997, -8.159257850999893], [-79.03337298799988, -8.158814600999904], [-79.03358398799998, -8.158634725999946], [-79.03396486299994, -8.158609350999882], [-79.03434373799985, -8.158865225999932], [-79.0345957379999, -8.159290975999966], [-79.03462111299996, -8.159679725999979], [-79.03452923799989, -8.160003851999875], [-79.03447461299993, -8.160238225999933], [-79.03449023799999, -8.160564475999934], [-79.03454298799988, -8.160908226999936], [-79.03491411299996, -8.160964850999903], [-79.03548636399995, -8.160966850999898], [-79.03628511299996, -8.16097072599996], [-79.03631261299995, -8.16097072599996], [-79.03631836299996, -8.160968725999965], [-79.03647461299994, -8.160964850999903], [-79.03700198799999, -8.160867225999937], [-79.03752923899998, -8.160937475999958], [-79.0379902379999, -8.160978475999968], [-79.0382617379999, -8.160990225999967], [-79.03978511299994, -8.159533225999951], [-79.04131636299996, -8.158093850999933], [-79.04292773799989, -8.156890600999873], [-79.04333598799991, -8.156521475999966], [-79.04455861299994, -8.155533225999932], [-79.04609961299997, -8.15406635099987], [-79.04765823899999, -8.15267185099998], [-79.04931448799988, -8.151478475999966], [-79.05087498899996, -8.150011725999946], [-79.05249611299996, -8.14863672699994], [-79.05408986399993, -8.147162100999878], [-79.05565623799993, -8.145660100999976], [-79.05670511299996, -8.144833975999973], [-79.05727736299997, -8.144392600999879], [-79.06079686299995, -8.140947225999923], [-79.06130273799994, -8.140478475999942], [-79.06456061299997, -8.137466850999886], [-79.06848636299998, -8.13419535099996], [-79.06903323799992, -8.133808601999931], [-79.07028911299989, -8.132785100999968], [-79.07004486299996, -8.132816351999963], [-79.06981048799992, -8.132779350999954], [-79.0695214879999, -8.132732350999959], [-79.06921286299996, -8.132714850999946], [-79.06899023799991, -8.132828101999962], [-79.06880073799994, -8.132964850999826], [-79.06853911299999, -8.133132975999956], [-79.06733398799992, -8.13199610099997], [-79.06673436299997, -8.131533225999931], [-79.06591411299996, -8.130632850999973], [-79.06536911299997, -8.12989447699988], [-79.06482223799992, -8.129076225999938], [-79.06422261299997, -8.128257850999944], [-79.06392186299996, -8.127574350999964], [-79.06378323799993, -8.127029351999965], [-79.06348636299998, -8.126345600999969], [-79.06347073799992, -8.126316350999957], [-79.06312886299997, -8.125636725999925], [-79.06266598799994, -8.124900350999951], [-79.06233986299998, -8.124134725999909], [-79.06184761299994, -8.12271685099995], [-79.06160161299982, -8.12175972699987], [-79.06130061299996, -8.121023475999891], [-79.06122073799992, -8.120040975999927], [-79.06116011299997, -8.11974810099997], [-79.06093548799993, -8.118654351999965], [-79.05425198899991, -8.120210975999896], [-79.05363473799991, -8.120531225999912], [-79.05380473899999, -8.121230475999937], [-79.05142186299997, -8.122289100999978], [-79.04681048799989, -8.124339850999945], [-79.0460624879999, -8.125501976999885], [-79.04637498799991, -8.12591785099994]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "BUENOS AIRES", "CODCCPP": "0001", "DEPARTAMEN": "LA LIBERTAD", "DISTRITO": "VICTOR LARCO HERRERA", "FUENTE": "INEI", "IDDIST": "130111", "IDDPTO": "13", "IDPROV": "1301", "PROVINCIA": "TRUJILLO"}, "type": "Feature"}], "type": "FeatureCollection"});
+            geo_json_69debb5236d046f6758987064860c2d7_add({"features": [{"geometry": {"coordinates": [[[[-79.04637498799991, -8.12591785099994], [-79.04262498799989, -8.129173850999962], [-79.04127536299995, -8.127617226999917], [-79.04041986299995, -8.128326225999956], [-79.03901561399994, -8.12882422599995], [-79.0382304879999, -8.129095725999946], [-79.03600786299995, -8.129861350999875], [-79.03525586299997, -8.13018560099988], [-79.02930073799996, -8.135531225999955], [-79.02741986299992, -8.137294975999964], [-79.02740623899996, -8.140161975999945], [-79.02737298799997, -8.143160100999978], [-79.0267283629999, -8.151256225999873], [-79.02780473799999, -8.151310600999864], [-79.02835348799988, -8.15190235199998], [-79.02865036299994, -8.152408225999977], [-79.02877536299997, -8.152833975999954], [-79.02902536299996, -8.153695350999897], [-79.02927536299995, -8.15468947699992], [-79.02962498799997, -8.155378850999853], [-79.03000598799991, -8.155734350999978], [-79.03037498799989, -8.156015600999979], [-79.03059173899999, -8.156324225999981], [-79.03073436299997, -8.156921850999879], [-79.03087698799999, -8.15742772599998], [-79.03117186299994, -8.158289100999923], [-79.0315429879999, -8.158570350999923], [-79.03244723799997, -8.159279350999896], [-79.03280661299993, -8.159634725999979], [-79.03307811299993, -8.15978122699994], [-79.0332422379999, -8.159808600999895], [-79.03332423799998, -8.159681600999875], [-79.03330861299997, -8.159257850999893], [-79.03337298799988, -8.158814600999904], [-79.03358398799998, -8.158634725999946], [-79.03396486299994, -8.158609350999882], [-79.03434373799985, -8.158865225999932], [-79.0345957379999, -8.159290975999966], [-79.03462111299996, -8.159679725999979], [-79.03452923799989, -8.160003851999875], [-79.03447461299993, -8.160238225999933], [-79.03449023799999, -8.160564475999934], [-79.03454298799988, -8.160908226999936], [-79.03491411299996, -8.160964850999903], [-79.03548636399995, -8.160966850999898], [-79.03628511299996, -8.16097072599996], [-79.03631261299995, -8.16097072599996], [-79.03631836299996, -8.160968725999965], [-79.03647461299994, -8.160964850999903], [-79.03700198799999, -8.160867225999937], [-79.03752923899998, -8.160937475999958], [-79.0379902379999, -8.160978475999968], [-79.0382617379999, -8.160990225999967], [-79.03978511299994, -8.159533225999951], [-79.04131636299996, -8.158093850999933], [-79.04292773799989, -8.156890600999873], [-79.04333598799991, -8.156521475999966], [-79.04455861299994, -8.155533225999932], [-79.04609961299997, -8.15406635099987], [-79.04765823899999, -8.15267185099998], [-79.04931448799988, -8.151478475999966], [-79.05087498899996, -8.150011725999946], [-79.05249611299996, -8.14863672699994], [-79.05408986399993, -8.147162100999878], [-79.05565623799993, -8.145660100999976], [-79.05670511299996, -8.144833975999973], [-79.05727736299997, -8.144392600999879], [-79.06079686299995, -8.140947225999923], [-79.06130273799994, -8.140478475999942], [-79.06456061299997, -8.137466850999886], [-79.06848636299998, -8.13419535099996], [-79.06903323799992, -8.133808601999931], [-79.07028911299989, -8.132785100999968], [-79.07004486299996, -8.132816351999963], [-79.06981048799992, -8.132779350999954], [-79.0695214879999, -8.132732350999959], [-79.06921286299996, -8.132714850999946], [-79.06899023799991, -8.132828101999962], [-79.06880073799994, -8.132964850999826], [-79.06853911299999, -8.133132975999956], [-79.06733398799992, -8.13199610099997], [-79.06673436299997, -8.131533225999931], [-79.06591411299996, -8.130632850999973], [-79.06536911299997, -8.12989447699988], [-79.06482223799992, -8.129076225999938], [-79.06422261299997, -8.128257850999944], [-79.06392186299996, -8.127574350999964], [-79.06378323799993, -8.127029351999965], [-79.06348636299998, -8.126345600999969], [-79.06347073799992, -8.126316350999957], [-79.06312886299997, -8.125636725999925], [-79.06266598799994, -8.124900350999951], [-79.06233986299998, -8.124134725999909], [-79.06184761299994, -8.12271685099995], [-79.06160161299982, -8.12175972699987], [-79.06130061299996, -8.121023475999891], [-79.06122073799992, -8.120040975999927], [-79.06116011299997, -8.11974810099997], [-79.06093548799993, -8.118654351999965], [-79.05425198899991, -8.120210975999896], [-79.05363473799991, -8.120531225999912], [-79.05380473899999, -8.121230475999937], [-79.05142186299997, -8.122289100999978], [-79.04681048799989, -8.124339850999945], [-79.0460624879999, -8.125501976999885], [-79.04637498799991, -8.12591785099994]]]], "type": "MultiPolygon"}, "properties": {"AREA": 1, "CAPITAL": "BUENOS AIRES", "CODCCPP": "0001", "DEPARTAMEN": "LA LIBERTAD", "DISTRITO": "VICTOR LARCO HERRERA", "FUENTE": "INEI", "IDDIST": "130111", "IDDPTO": "13", "IDPROV": "1301", "PROVINCIA": "TRUJILLO"}, "type": "Feature"}], "type": "FeatureCollection"});
 
         
     
-            geo_json_0299efc70be1437c15112456643d30a8.addTo(feature_group_fe8f87328a48b797f549b39e7d92f567);
+            geo_json_69debb5236d046f6758987064860c2d7.addTo(feature_group_d4fe386a37ae939058ec4731e375784e);
         
     
-            feature_group_fe8f87328a48b797f549b39e7d92f567.addTo(map_707063178d904f651ae8585552e8310c);
+            feature_group_d4fe386a37ae939058ec4731e375784e.addTo(map_0c2f90ccaecfd495c2b81561637da184);
         
     
-            var feature_group_caa7f78efc1244e99b4c950540678d48 = L.featureGroup(
+            var feature_group_a13439f51c3c42c3940bda0b4d10a744 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_b1521dcbd517d173ae68dc240f6f5729 = L.circle(
+            var circle_c3336e15d63985af8f69d7e150db213f = L.circle(
                 [-8.13184, -79.051106],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_a51ef01af82fd0aa2008b0e662c6ce73 = L.circle(
+            var circle_23dcc0e6b3a8c7abe62dae5578930482 = L.circle(
                 [-8.1291328, -79.0427043],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_2e1e2c51f1b6369a5fa76899be0e2b86 = L.circle(
+            var circle_1afca972ddee64c212c02a71b82b169f = L.circle(
                 [-8.1293843, -79.0429224],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_967b0c298f7547ae9a339f14dfdce412 = L.circle(
+            var circle_7fa9e8441358603a6801227ad88571c0 = L.circle(
                 [-8.1412499, -79.0594322],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_d33d66ef29ec080d00ee69c0a03c2156 = L.circle(
+            var circle_004e27cfd38abbf9cb8d0ca379a270ce = L.circle(
                 [-8.1412915, -79.0593719],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_ddaef24e40ac5d8f29caa5264c30b0e4 = L.circle(
+            var circle_7c1e9e99a391e039114dcf19ae435ca5 = L.circle(
                 [-8.1414638, -79.0596132],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_b09294eaa434d0f772f4621d1c5b0b02 = L.circle(
+            var circle_f5f9e787c203ffe370582658f00428ee = L.circle(
                 [-8.1415097, -79.0595546],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_f2ce6d73da42d5cd1a0a6acafd160023 = L.circle(
+            var circle_a92fe0c9757a9a605e320928ab7fac24 = L.circle(
                 [-8.1429777, -79.0547783],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_ff693e3af91b72d3a4ffe015348182fe = L.circle(
+            var circle_22707ac56648f5cd7a81b55c8e2f5f82 = L.circle(
                 [-8.1281469, -79.0407249],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_42f35e43161970497029d60b5b43312b = L.circle(
+            var circle_6b78b7a72f299adb22e0e2162a624056 = L.circle(
                 [-8.1430645, -79.0546698],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_15fc5b7d6db239b559f963f642fc2627 = L.circle(
+            var circle_1d1e3132d6136a8af3049bb8ab6ecff5 = L.circle(
                 [-8.129088, -79.0427684],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_904ee3ce8566e70e11c126e5f1907f15 = L.circle(
+            var circle_54f315de180648c9496298bf11f1c803 = L.circle(
                 [-8.1293355, -79.0429806],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            var circle_9762beb29bea1f499d196677c0679b7c = L.circle(
+            var circle_5a529d5669d323dfb24e016219c4433b = L.circle(
                 [-8.131527, -79.050961],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 50, "stroke": true, "weight": 2}
-            ).addTo(feature_group_caa7f78efc1244e99b4c950540678d48);
+            ).addTo(feature_group_a13439f51c3c42c3940bda0b4d10a744);
         
     
-            feature_group_caa7f78efc1244e99b4c950540678d48.addTo(map_707063178d904f651ae8585552e8310c);
+            feature_group_a13439f51c3c42c3940bda0b4d10a744.addTo(map_0c2f90ccaecfd495c2b81561637da184);
         
     
-            var feature_group_43b92583c60a0a16a0a4c30f42433533 = L.featureGroup(
+            var feature_group_e4fc825675519170baece1c9884f50d3 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_bef8e1157809bb4664c888f2cf4e262c = L.circleMarker(
+            var circle_marker_28fcee5c54c01062eb29cb9ab2897ec4 = L.circleMarker(
                 [-8.13184, -79.051106],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_e76abf122a109e1dec082b239c5d2db5 = L.popup({
+        var popup_33ce5c727e27f76027f8a4bedb1724bf = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_b3a4cf1fe08324d110b9310de49e5d67 = $(`<div id="html_b3a4cf1fe08324d110b9310de49e5d67" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-32839</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.13184</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.051106</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>AV. HUAMAN CON AV. JUAN PABLO II</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_e76abf122a109e1dec082b239c5d2db5.setContent(html_b3a4cf1fe08324d110b9310de49e5d67);
+                var html_8ecb4d616d6414f3ecff50f12616f214 = $(`<div id="html_8ecb4d616d6414f3ecff50f12616f214" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-32839</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.13184</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.051106</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>AV. HUAMAN CON AV. JUAN PABLO II</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_33ce5c727e27f76027f8a4bedb1724bf.setContent(html_8ecb4d616d6414f3ecff50f12616f214);
             
         
 
-        circle_marker_bef8e1157809bb4664c888f2cf4e262c.bindPopup(popup_e76abf122a109e1dec082b239c5d2db5)
+        circle_marker_28fcee5c54c01062eb29cb9ab2897ec4.bindPopup(popup_33ce5c727e27f76027f8a4bedb1724bf)
         ;
 
         
     
     
-            var circle_marker_cfcd9e75653c3043cf338a4a0a082b9e = L.circleMarker(
+            circle_marker_28fcee5c54c01062eb29cb9ab2897ec4.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_b090fa7c80437e5f1d14f192a093f330 = L.circleMarker(
                 [-8.1291328, -79.0427043],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_5c10e39206065f65ad1797ec1f3ee8e1 = L.popup({
+        var popup_c0707a8afc9b73c5e351c6237120fca0 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_ac565ef2aeddcde9d1bec2f93bab0a83 = $(`<div id="html_ac565ef2aeddcde9d1bec2f93bab0a83" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-33889</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1291328</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0427043</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Juan J. Ganoza</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_5c10e39206065f65ad1797ec1f3ee8e1.setContent(html_ac565ef2aeddcde9d1bec2f93bab0a83);
+                var html_c839be2cdd69351e87cc4c77606d55bb = $(`<div id="html_c839be2cdd69351e87cc4c77606d55bb" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-33889</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1291328</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0427043</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Juan J. Ganoza</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_c0707a8afc9b73c5e351c6237120fca0.setContent(html_c839be2cdd69351e87cc4c77606d55bb);
             
         
 
-        circle_marker_cfcd9e75653c3043cf338a4a0a082b9e.bindPopup(popup_5c10e39206065f65ad1797ec1f3ee8e1)
+        circle_marker_b090fa7c80437e5f1d14f192a093f330.bindPopup(popup_c0707a8afc9b73c5e351c6237120fca0)
         ;
 
         
     
     
-            var circle_marker_2ecc09edeb66d132e7293cf880391826 = L.circleMarker(
+            circle_marker_b090fa7c80437e5f1d14f192a093f330.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_ffe236bdd702765a3c72c3d0a9cd81ca = L.circleMarker(
                 [-8.1293843, -79.0429224],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_2d1c2b1b46072d8bb7d4de4bb1ad600f = L.popup({
+        var popup_d68dd56e1dd6da76e34c8fa261e758b3 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_4a2dfd12081d3702fa4b3e70a186d26b = $(`<div id="html_4a2dfd12081d3702fa4b3e70a186d26b" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-340081</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1293843</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0429224</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_2d1c2b1b46072d8bb7d4de4bb1ad600f.setContent(html_4a2dfd12081d3702fa4b3e70a186d26b);
+                var html_052e6a5d52d3c252fc858b10bf4e81dc = $(`<div id="html_052e6a5d52d3c252fc858b10bf4e81dc" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-340081</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1293843</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0429224</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_d68dd56e1dd6da76e34c8fa261e758b3.setContent(html_052e6a5d52d3c252fc858b10bf4e81dc);
             
         
 
-        circle_marker_2ecc09edeb66d132e7293cf880391826.bindPopup(popup_2d1c2b1b46072d8bb7d4de4bb1ad600f)
+        circle_marker_ffe236bdd702765a3c72c3d0a9cd81ca.bindPopup(popup_d68dd56e1dd6da76e34c8fa261e758b3)
         ;
 
         
     
     
-            var circle_marker_5e2c4a456058bc208eed01f099fd7301 = L.circleMarker(
+            circle_marker_ffe236bdd702765a3c72c3d0a9cd81ca.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_c9cb612b9df1bfc94513938bb21d32b8 = L.circleMarker(
                 [-8.1412499, -79.0594322],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_10c66e465d74837c4219c7d0545500fd = L.popup({
+        var popup_09ede20994947de7688a5351ddaf8e77 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_3c1532e770605c6f57dd9daf50427d6a = $(`<div id="html_3c1532e770605c6f57dd9daf50427d6a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38159</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1412499</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0594322</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Pedro Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_10c66e465d74837c4219c7d0545500fd.setContent(html_3c1532e770605c6f57dd9daf50427d6a);
+                var html_de205df06cd58a05ca611458b25f92e5 = $(`<div id="html_de205df06cd58a05ca611458b25f92e5" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38159</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1412499</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0594322</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Pedro Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_09ede20994947de7688a5351ddaf8e77.setContent(html_de205df06cd58a05ca611458b25f92e5);
             
         
 
-        circle_marker_5e2c4a456058bc208eed01f099fd7301.bindPopup(popup_10c66e465d74837c4219c7d0545500fd)
+        circle_marker_c9cb612b9df1bfc94513938bb21d32b8.bindPopup(popup_09ede20994947de7688a5351ddaf8e77)
         ;
 
         
     
     
-            var circle_marker_7172b673ba1af564af1a82dbb3372333 = L.circleMarker(
+            circle_marker_c9cb612b9df1bfc94513938bb21d32b8.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_2e3585528a27ee6437807d1cc9744b7f = L.circleMarker(
                 [-8.1412915, -79.0593719],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_a9ccfea32e9f65ed46eca269fa01574b = L.popup({
+        var popup_0db61d1441e0b18c86c4c2bd598862e5 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_fb41a80f654a0cd0d3b1a96c5482d52d = $(`<div id="html_fb41a80f654a0cd0d3b1a96c5482d52d" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38161</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1412915</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0593719</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Pedro Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_a9ccfea32e9f65ed46eca269fa01574b.setContent(html_fb41a80f654a0cd0d3b1a96c5482d52d);
+                var html_a309c929e328e733ca18869d5dbb26f8 = $(`<div id="html_a309c929e328e733ca18869d5dbb26f8" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38161</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1412915</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0593719</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Pedro Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_0db61d1441e0b18c86c4c2bd598862e5.setContent(html_a309c929e328e733ca18869d5dbb26f8);
             
         
 
-        circle_marker_7172b673ba1af564af1a82dbb3372333.bindPopup(popup_a9ccfea32e9f65ed46eca269fa01574b)
+        circle_marker_2e3585528a27ee6437807d1cc9744b7f.bindPopup(popup_0db61d1441e0b18c86c4c2bd598862e5)
         ;
 
         
     
     
-            var circle_marker_0b67e5ffe9a2bf95edf637c02011db03 = L.circleMarker(
+            circle_marker_2e3585528a27ee6437807d1cc9744b7f.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_833974b2a49e0f46d768539ed04f2fa5 = L.circleMarker(
                 [-8.1414638, -79.0596132],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_e2d3f8a28e9c12b39e501ea2176da7a7 = L.popup({
+        var popup_b0e771349750ab9ed15bb280f3b7ec91 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_2c64cfc4412939f0d484740716877798 = $(`<div id="html_2c64cfc4412939f0d484740716877798" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38224</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1414638</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0596132</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Rubén Paoli</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_e2d3f8a28e9c12b39e501ea2176da7a7.setContent(html_2c64cfc4412939f0d484740716877798);
+                var html_e1d7043a54fc5a7e98245d8a302a695f = $(`<div id="html_e1d7043a54fc5a7e98245d8a302a695f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38224</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1414638</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0596132</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Rubén Paoli</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_b0e771349750ab9ed15bb280f3b7ec91.setContent(html_e1d7043a54fc5a7e98245d8a302a695f);
             
         
 
-        circle_marker_0b67e5ffe9a2bf95edf637c02011db03.bindPopup(popup_e2d3f8a28e9c12b39e501ea2176da7a7)
+        circle_marker_833974b2a49e0f46d768539ed04f2fa5.bindPopup(popup_b0e771349750ab9ed15bb280f3b7ec91)
         ;
 
         
     
     
-            var circle_marker_fc491335f1eb0d8b872748a345755fee = L.circleMarker(
+            circle_marker_833974b2a49e0f46d768539ed04f2fa5.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_72daf7679b2429b7f85c1400210b9311 = L.circleMarker(
                 [-8.1415097, -79.0595546],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_f965a11109e0b7f866f1e6dc95784f61 = L.popup({
+        var popup_a863281a5beb0abf5a7b84d329d5c2a8 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_0953bc435512075a4c7c44c0f22fc7ba = $(`<div id="html_0953bc435512075a4c7c44c0f22fc7ba" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38225</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1415097</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0595546</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Rubén Paoli</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_f965a11109e0b7f866f1e6dc95784f61.setContent(html_0953bc435512075a4c7c44c0f22fc7ba);
+                var html_80059fb35e163dc506a52a843bf5efa9 = $(`<div id="html_80059fb35e163dc506a52a843bf5efa9" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38225</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1415097</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0595546</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Libertad / Calle Rubén Paoli</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_a863281a5beb0abf5a7b84d329d5c2a8.setContent(html_80059fb35e163dc506a52a843bf5efa9);
             
         
 
-        circle_marker_fc491335f1eb0d8b872748a345755fee.bindPopup(popup_f965a11109e0b7f866f1e6dc95784f61)
+        circle_marker_72daf7679b2429b7f85c1400210b9311.bindPopup(popup_a863281a5beb0abf5a7b84d329d5c2a8)
         ;
 
         
     
     
-            var circle_marker_7e5ac88af0594a3a5aed76c93a2d5e3c = L.circleMarker(
+            circle_marker_72daf7679b2429b7f85c1400210b9311.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_548928f30181a6587d964fbcaf624a01 = L.circleMarker(
                 [-8.1429777, -79.0547783],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_84d88ebcfbd9045e6a4efc2092bc5564 = L.popup({
+        var popup_639bdd51fa26d8fe0107fe94a5fa90aa = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_4e835d9319e16a35f8379413e8b5ed8b = $(`<div id="html_4e835d9319e16a35f8379413e8b5ed8b" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38326</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1429777</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0547783</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Jr. Desamparados / Jr. Santa Rosa</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_84d88ebcfbd9045e6a4efc2092bc5564.setContent(html_4e835d9319e16a35f8379413e8b5ed8b);
+                var html_8d8009e6ec66fb2a6504d94c4b7e3af2 = $(`<div id="html_8d8009e6ec66fb2a6504d94c4b7e3af2" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-38326</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1429777</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0547783</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Jr. Desamparados / Jr. Santa Rosa</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_639bdd51fa26d8fe0107fe94a5fa90aa.setContent(html_8d8009e6ec66fb2a6504d94c4b7e3af2);
             
         
 
-        circle_marker_7e5ac88af0594a3a5aed76c93a2d5e3c.bindPopup(popup_84d88ebcfbd9045e6a4efc2092bc5564)
+        circle_marker_548928f30181a6587d964fbcaf624a01.bindPopup(popup_639bdd51fa26d8fe0107fe94a5fa90aa)
         ;
 
         
     
     
-            var circle_marker_26196a4c95bb16745e8b2c627548b349 = L.circleMarker(
+            circle_marker_548928f30181a6587d964fbcaf624a01.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_b7b2be404cfaa0ea2fe47142b7a15ec6 = L.circleMarker(
                 [-8.1281469, -79.0407249],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_559fa66c2c70daf909bc2e11134b69d8 = L.popup({
+        var popup_83b544c49e64cf126367d3a53fb56f76 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_7b2e6517ce4cddbc68f64dfba7ed85a6 = $(`<div id="html_7b2e6517ce4cddbc68f64dfba7ed85a6" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-40946</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1281469</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0407249</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Fátima / Calle los Cipreses</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_559fa66c2c70daf909bc2e11134b69d8.setContent(html_7b2e6517ce4cddbc68f64dfba7ed85a6);
+                var html_bab58b3039c3c4b4dd50c3db0bed517e = $(`<div id="html_bab58b3039c3c4b4dd50c3db0bed517e" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-40946</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1281469</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0407249</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Fátima / Calle los Cipreses</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_83b544c49e64cf126367d3a53fb56f76.setContent(html_bab58b3039c3c4b4dd50c3db0bed517e);
             
         
 
-        circle_marker_26196a4c95bb16745e8b2c627548b349.bindPopup(popup_559fa66c2c70daf909bc2e11134b69d8)
+        circle_marker_b7b2be404cfaa0ea2fe47142b7a15ec6.bindPopup(popup_83b544c49e64cf126367d3a53fb56f76)
         ;
 
         
     
     
-            var circle_marker_4d7ca6eef7916d563481a538497fa04d = L.circleMarker(
+            circle_marker_b7b2be404cfaa0ea2fe47142b7a15ec6.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_39b153c512e0f4956c542a032a22a417 = L.circleMarker(
                 [-8.1430645, -79.0546698],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_a5493fb95e798f15c7c7d201dc41ed8c = L.popup({
+        var popup_74a45bf94ab529e73973cba7d436d9e9 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_9e427a67fadd1c7885e5d56438abd814 = $(`<div id="html_9e427a67fadd1c7885e5d56438abd814" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-498294</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1430645</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0546698</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Jr. Santa Rosa</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_a5493fb95e798f15c7c7d201dc41ed8c.setContent(html_9e427a67fadd1c7885e5d56438abd814);
+                var html_4a9026bb4d2d05fd5d07397c1d13387e = $(`<div id="html_4a9026bb4d2d05fd5d07397c1d13387e" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-498294</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1430645</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0546698</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Jr. Santa Rosa</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_74a45bf94ab529e73973cba7d436d9e9.setContent(html_4a9026bb4d2d05fd5d07397c1d13387e);
             
         
 
-        circle_marker_4d7ca6eef7916d563481a538497fa04d.bindPopup(popup_a5493fb95e798f15c7c7d201dc41ed8c)
+        circle_marker_39b153c512e0f4956c542a032a22a417.bindPopup(popup_74a45bf94ab529e73973cba7d436d9e9)
         ;
 
         
     
     
-            var circle_marker_b2a1f18fafe26dd85e59f9c298aabf16 = L.circleMarker(
+            circle_marker_39b153c512e0f4956c542a032a22a417.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_522cb1ae4d16dc33ff84af7834acbecd = L.circleMarker(
                 [-8.129088, -79.0427684],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_30812d085691cb9981e810e1bf8547f8 = L.popup({
+        var popup_f38834ededaaf7abfa575076a23887d6 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_ffe96488291c271c7aafda4b764b3e8a = $(`<div id="html_ffe96488291c271c7aafda4b764b3e8a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-6507</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.129088</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0427684</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Juan J. Ganoza</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_30812d085691cb9981e810e1bf8547f8.setContent(html_ffe96488291c271c7aafda4b764b3e8a);
+                var html_b4e82f32696e6056ad1fce8d8b86b879 = $(`<div id="html_b4e82f32696e6056ad1fce8d8b86b879" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-6507</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.129088</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0427684</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera / Juan J. Ganoza</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_f38834ededaaf7abfa575076a23887d6.setContent(html_b4e82f32696e6056ad1fce8d8b86b879);
             
         
 
-        circle_marker_b2a1f18fafe26dd85e59f9c298aabf16.bindPopup(popup_30812d085691cb9981e810e1bf8547f8)
+        circle_marker_522cb1ae4d16dc33ff84af7834acbecd.bindPopup(popup_f38834ededaaf7abfa575076a23887d6)
         ;
 
         
     
     
-            var circle_marker_a486f994c78c0c4f95f26d271c53e4ba = L.circleMarker(
+            circle_marker_522cb1ae4d16dc33ff84af7834acbecd.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_f446308859466cb649e82f08f44e7523 = L.circleMarker(
                 [-8.1293355, -79.0429806],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_c55f85d66e059b73eea255e2d33cc3ba = L.popup({
+        var popup_a525ad01990f6859278cced9126f6b96 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_13ce78449e08449b6e1936878c414485 = $(`<div id="html_13ce78449e08449b6e1936878c414485" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-6516</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1293355</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0429806</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_c55f85d66e059b73eea255e2d33cc3ba.setContent(html_13ce78449e08449b6e1936878c414485);
+                var html_826bd3e20a3a3b5ea70eaf0ec7b8883a = $(`<div id="html_826bd3e20a3a3b5ea70eaf0ec7b8883a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-6516</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.1293355</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.0429806</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Avenida Victor Larco Herrera</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_a525ad01990f6859278cced9126f6b96.setContent(html_826bd3e20a3a3b5ea70eaf0ec7b8883a);
             
         
 
-        circle_marker_a486f994c78c0c4f95f26d271c53e4ba.bindPopup(popup_c55f85d66e059b73eea255e2d33cc3ba)
+        circle_marker_f446308859466cb649e82f08f44e7523.bindPopup(popup_a525ad01990f6859278cced9126f6b96)
         ;
 
         
     
     
-            var circle_marker_06f0508433987b433b032d34265894d8 = L.circleMarker(
+            circle_marker_f446308859466cb649e82f08f44e7523.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_64e3c695aa576c5ddcb2710d0401de85 = L.circleMarker(
                 [-8.131527, -79.050961],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_43b92583c60a0a16a0a4c30f42433533);
+            ).addTo(feature_group_e4fc825675519170baece1c9884f50d3);
         
     
-        var popup_ef80e21129269649e34aa37c12e60c5d = L.popup({
+        var popup_c88f779abc2dd391617495ece5c3bb64 = L.popup({
   "maxWidth": 460,
 });
 
         
             
-                var html_35dc2cbd60ddd3e34da4bfd499807103 = $(`<div id="html_35dc2cbd60ddd3e34da4bfd499807103" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-32851</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.131527</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.050961</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Av. Huaman con Av. Juan Pablo II</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_ef80e21129269649e34aa37c12e60c5d.setContent(html_35dc2cbd60ddd3e34da4bfd499807103);
+                var html_9bcc346307d557bf93a72d7fb6b6788e = $(`<div id="html_9bcc346307d557bf93a72d7fb6b6788e" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Intersección priorizada</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>id_int</th><td style='padding:2px 0;'>l-32851</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-8.131527</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-79.050961</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>vias</th><td style='padding:2px 0;'>Av. Huaman con Av. Juan Pablo II</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestro_fatal</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_c88f779abc2dd391617495ece5c3bb64.setContent(html_9bcc346307d557bf93a72d7fb6b6788e);
             
         
 
-        circle_marker_06f0508433987b433b032d34265894d8.bindPopup(popup_ef80e21129269649e34aa37c12e60c5d)
+        circle_marker_64e3c695aa576c5ddcb2710d0401de85.bindPopup(popup_c88f779abc2dd391617495ece5c3bb64)
         ;
 
         
     
     
-            feature_group_43b92583c60a0a16a0a4c30f42433533.addTo(map_707063178d904f651ae8585552e8310c);
+            circle_marker_64e3c695aa576c5ddcb2710d0401de85.bindTooltip(
+                `<div>
+                      | 
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
         
     
-            var feature_group_71d233d1f78bf214c01fefc4ab6a5b42 = L.featureGroup(
+            feature_group_e4fc825675519170baece1c9884f50d3.addTo(map_0c2f90ccaecfd495c2b81561637da184);
+        
+    
+            var feature_group_5ad070e6fa36ea2c85cae678eb140932 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_eaf991df9bda17579b7a64b4d10fad8c = L.circleMarker(
+            var circle_marker_fba985649debe9081669b731f4c94893 = L.circleMarker(
                 [-8.15108, -79.034121],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_571ad64123b238ee1a361e281bdb49fd = L.popup({
+        var popup_30da083e5f512d7b54cf48838ed90b47 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_eac233de1d84bcb1de7627fe338ba970 = $(`<div id="html_eac233de1d84bcb1de7627fe338ba970" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-04-215</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/04/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>19:25</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CPN KM 523</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.15108</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.034121</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_571ad64123b238ee1a361e281bdb49fd.setContent(html_eac233de1d84bcb1de7627fe338ba970);
+                var html_937e8257291c9ffd582347538d946788 = $(`<div id="html_937e8257291c9ffd582347538d946788" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-04-215</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/04/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>19:25</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CPN KM 523</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.15108</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.034121</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_30da083e5f512d7b54cf48838ed90b47.setContent(html_937e8257291c9ffd582347538d946788);
             
         
 
-        circle_marker_eaf991df9bda17579b7a64b4d10fad8c.bindPopup(popup_571ad64123b238ee1a361e281bdb49fd)
+        circle_marker_fba985649debe9081669b731f4c94893.bindPopup(popup_30da083e5f512d7b54cf48838ed90b47)
         ;
 
         
     
     
-            var circle_marker_d7c95a3b288f4322965580fce42e5234 = L.circleMarker(
+            var circle_marker_e250ec88869e8bbaf229d98a45e3f247 = L.circleMarker(
                 [-8.141297, -79.059369],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_9dc31976e4c9ef73ce4fba3e1b370c22 = L.popup({
+        var popup_0685eacc90d2926a8df3e8fbe1c46ee7 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_dda66e24c8c7a101e40494f3be53f390 = $(`<div id="html_dda66e24c8c7a101e40494f3be53f390" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-11-84</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>17/11/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>10:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. LIBERTAD Y CA. PEDRO HERRERA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.141297</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.059369</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>NO ESTABLECER EL DERECHO DE PASO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_9dc31976e4c9ef73ce4fba3e1b370c22.setContent(html_dda66e24c8c7a101e40494f3be53f390);
+                var html_5f9079ad4bed105dd198c5dfb1ced238 = $(`<div id="html_5f9079ad4bed105dd198c5dfb1ced238" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2021-11-84</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>17/11/2021</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>10:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. LIBERTAD Y CA. PEDRO HERRERA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.141297</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.059369</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>NO ESTABLECER EL DERECHO DE PASO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_0685eacc90d2926a8df3e8fbe1c46ee7.setContent(html_5f9079ad4bed105dd198c5dfb1ced238);
             
         
 
-        circle_marker_d7c95a3b288f4322965580fce42e5234.bindPopup(popup_9dc31976e4c9ef73ce4fba3e1b370c22)
+        circle_marker_e250ec88869e8bbaf229d98a45e3f247.bindPopup(popup_0685eacc90d2926a8df3e8fbe1c46ee7)
         ;
 
         
     
     
-            var circle_marker_2b2598f03b4d6ff5e027a121a5c7db98 = L.circleMarker(
+            var circle_marker_8ba1b8660a74d3514d91c3bcd5831b0f = L.circleMarker(
                 [-8.143138, -79.049077],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_36d00f3456b0318d2b62732a42ad1bf6 = L.popup({
+        var popup_08053120dec32405239afcd9e82e99ba = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_76f0caf6c4c70ca21f5fbd5913fe98d5 = $(`<div id="html_76f0caf6c4c70ca21f5fbd5913fe98d5" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-07-101</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>22/07/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. MANUEL SEOANE CDRA. 6</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.143138</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.049077</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NEGLIGENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>OTRO (NEGLIGENCIA DEL CONDUCTOR)</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'>DESPLAZARSE SIN EL DEBIDO CUIDADO Y PREVENCION</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_36d00f3456b0318d2b62732a42ad1bf6.setContent(html_76f0caf6c4c70ca21f5fbd5913fe98d5);
+                var html_62bdcc2e1f0dedf51ae8fcee6c5cda86 = $(`<div id="html_62bdcc2e1f0dedf51ae8fcee6c5cda86" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-07-101</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>22/07/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. MANUEL SEOANE CDRA. 6</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.143138</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.049077</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NEGLIGENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>OTRO (NEGLIGENCIA DEL CONDUCTOR)</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'>DESPLAZARSE SIN EL DEBIDO CUIDADO Y PREVENCION</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_08053120dec32405239afcd9e82e99ba.setContent(html_62bdcc2e1f0dedf51ae8fcee6c5cda86);
             
         
 
-        circle_marker_2b2598f03b4d6ff5e027a121a5c7db98.bindPopup(popup_36d00f3456b0318d2b62732a42ad1bf6)
+        circle_marker_8ba1b8660a74d3514d91c3bcd5831b0f.bindPopup(popup_08053120dec32405239afcd9e82e99ba)
         ;
 
         
     
     
-            var circle_marker_9d962ff41e974707966ef1aa0a022542 = L.circleMarker(
+            var circle_marker_e3a92a56cf44a2f09da39b9c40927eed = L.circleMarker(
                 [-8.149811, -79.041772],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_f99e8ed3bb30cf1dec40b895d996e3ab = L.popup({
+        var popup_f263cb4d448f96cb05fddf6e9544fc9b = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_ecdc472e9235605e9d20c1f190dfa14f = $(`<div id="html_ecdc472e9235605e9d20c1f190dfa14f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-11-79</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>06/11/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:55</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 567</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.149811</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.041772</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_f99e8ed3bb30cf1dec40b895d996e3ab.setContent(html_ecdc472e9235605e9d20c1f190dfa14f);
+                var html_029c51dc84489381b2fa766249da0844 = $(`<div id="html_029c51dc84489381b2fa766249da0844" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-11-79</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>06/11/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:55</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 567</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.149811</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.041772</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_f263cb4d448f96cb05fddf6e9544fc9b.setContent(html_029c51dc84489381b2fa766249da0844);
             
         
 
-        circle_marker_9d962ff41e974707966ef1aa0a022542.bindPopup(popup_f99e8ed3bb30cf1dec40b895d996e3ab)
+        circle_marker_e3a92a56cf44a2f09da39b9c40927eed.bindPopup(popup_f263cb4d448f96cb05fddf6e9544fc9b)
         ;
 
         
     
     
-            var circle_marker_51ca1fb047b77efd2bc9562c99b6fffe = L.circleMarker(
+            var circle_marker_d478a80b6723ec227f8b54e1c87bb717 = L.circleMarker(
                 [-8.152316035, -79.0352888893091],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_ad9485f8e1786bdfc280297444ad3ebf = L.popup({
+        var popup_c99beefc978335df2c84363a17af0e94 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_7bb44e2d6bd8cd0e88885fa26fa6231e = $(`<div id="html_7bb44e2d6bd8cd0e88885fa26fa6231e" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-11-87</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>19/11/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>21:50</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.152316035</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0352888893091</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>ADELANTAR INDEBIDAMENTE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_ad9485f8e1786bdfc280297444ad3ebf.setContent(html_7bb44e2d6bd8cd0e88885fa26fa6231e);
+                var html_8aa4cd6eeadfc6b18d97307b8636330f = $(`<div id="html_8aa4cd6eeadfc6b18d97307b8636330f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-11-87</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>19/11/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>21:50</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.152316035</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0352888893091</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>ADELANTAR INDEBIDAMENTE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_c99beefc978335df2c84363a17af0e94.setContent(html_8aa4cd6eeadfc6b18d97307b8636330f);
             
         
 
-        circle_marker_51ca1fb047b77efd2bc9562c99b6fffe.bindPopup(popup_ad9485f8e1786bdfc280297444ad3ebf)
+        circle_marker_d478a80b6723ec227f8b54e1c87bb717.bindPopup(popup_c99beefc978335df2c84363a17af0e94)
         ;
 
         
     
     
-            var circle_marker_f00f1e249b2cbfc8b1500a61faad8724 = L.circleMarker(
+            var circle_marker_f475df720c83a76a7dcf294be1dd4b17 = L.circleMarker(
                 [-8.133712, -79.064233],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_72f6b6c88a300e91f32ffac5cbbf3d4f = L.popup({
+        var popup_59199097ff98b23411ed0ee333ef1617 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_2eaa899c34b48cd6792c44148574779b = $(`<div id="html_2eaa899c34b48cd6792c44148574779b" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-12-74</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>28/12/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>06:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 560.3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.133712</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.064233</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>EXCESO DE VELOCIDAD</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_72f6b6c88a300e91f32ffac5cbbf3d4f.setContent(html_2eaa899c34b48cd6792c44148574779b);
+                var html_c7f4a762415daa30397792f36a80ca77 = $(`<div id="html_c7f4a762415daa30397792f36a80ca77" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2022-12-74</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>28/12/2022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>06:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 560.3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.133712</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.064233</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>EXCESO DE VELOCIDAD</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_59199097ff98b23411ed0ee333ef1617.setContent(html_c7f4a762415daa30397792f36a80ca77);
             
         
 
-        circle_marker_f00f1e249b2cbfc8b1500a61faad8724.bindPopup(popup_72f6b6c88a300e91f32ffac5cbbf3d4f)
+        circle_marker_f475df720c83a76a7dcf294be1dd4b17.bindPopup(popup_59199097ff98b23411ed0ee333ef1617)
         ;
 
         
     
     
-            var circle_marker_0f795e94ed1f4079de06b15f16d4f636 = L.circleMarker(
+            var circle_marker_52de351d57b6c4c632de74f0be7c693e = L.circleMarker(
                 [-8.1408261, -79.0522763],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_f9f351432307222d2969c5ead31aa993 = L.popup({
+        var popup_dbe5e5656a632069196fc01ad1313233 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_a78966d5e4ee3e312166ab9b98f7e5b5 = $(`<div id="html_a78966d5e4ee3e312166ab9b98f7e5b5" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-01-42</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>15/01/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 02 DE MAYO ALTURA DEL FRONTIS DE LA COMISARIA PNP BUENOS AIRES</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>COMISARIA PNP BUENOS AIRES</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.1408261</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0522763</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_f9f351432307222d2969c5ead31aa993.setContent(html_a78966d5e4ee3e312166ab9b98f7e5b5);
+                var html_43b905195aad7cad5b8bc569754fc8cb = $(`<div id="html_43b905195aad7cad5b8bc569754fc8cb" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-01-42</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>15/01/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 02 DE MAYO ALTURA DEL FRONTIS DE LA COMISARIA PNP BUENOS AIRES</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>COMISARIA PNP BUENOS AIRES</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.1408261</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0522763</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_dbe5e5656a632069196fc01ad1313233.setContent(html_43b905195aad7cad5b8bc569754fc8cb);
             
         
 
-        circle_marker_0f795e94ed1f4079de06b15f16d4f636.bindPopup(popup_f9f351432307222d2969c5ead31aa993)
+        circle_marker_52de351d57b6c4c632de74f0be7c693e.bindPopup(popup_dbe5e5656a632069196fc01ad1313233)
         ;
 
         
     
     
-            var circle_marker_28f5ffa282048d29bbc0143893e592f3 = L.circleMarker(
+            var circle_marker_3de8c62f125a488890c7088859645f7f = L.circleMarker(
                 [-8.136443, -79.058955],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_48a1e9b7c676a7be5e2780568e1386ab = L.popup({
+        var popup_6c752a00145d0afef758b2129d3adf74 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_1711008bcebb7fea830838c96893af2a = $(`<div id="html_1711008bcebb7fea830838c96893af2a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-05-66</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>13/05/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>13:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE FRENTE A LOS CABALLOS DE PASO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.136443</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.058955</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_48a1e9b7c676a7be5e2780568e1386ab.setContent(html_1711008bcebb7fea830838c96893af2a);
+                var html_5d6dc897ec04de2fc366f6ae5378dd25 = $(`<div id="html_5d6dc897ec04de2fc366f6ae5378dd25" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-05-66</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>13/05/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>13:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE FRENTE A LOS CABALLOS DE PASO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.136443</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.058955</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_6c752a00145d0afef758b2129d3adf74.setContent(html_5d6dc897ec04de2fc366f6ae5378dd25);
             
         
 
-        circle_marker_28f5ffa282048d29bbc0143893e592f3.bindPopup(popup_48a1e9b7c676a7be5e2780568e1386ab)
+        circle_marker_3de8c62f125a488890c7088859645f7f.bindPopup(popup_6c752a00145d0afef758b2129d3adf74)
         ;
 
         
     
     
-            var circle_marker_fa34b7fde9be40f808615c9bc4a888f2 = L.circleMarker(
+            var circle_marker_56c6c13b88fed117b7d6125f9be73f90 = L.circleMarker(
                 [-8.146174, -79.046022],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_50deb5bb8720c973e34e8d0050135750 = L.popup({
+        var popup_44810c2b1e3ad90eceac50329f2a2160 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_67683cfccc7a0e945aa05bce596a3311 = $(`<div id="html_67683cfccc7a0e945aa05bce596a3311" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-06-36</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>02/06/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 02 DE MAYO ALTURA DEL GRIFO PRIMAX</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.146174</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.046022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL PEATÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CRUCE INDEBIDO POR LA CALZADA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_50deb5bb8720c973e34e8d0050135750.setContent(html_67683cfccc7a0e945aa05bce596a3311);
+                var html_8eef81486fd0e9b4a3a08916b5bb7bf0 = $(`<div id="html_8eef81486fd0e9b4a3a08916b5bb7bf0" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-06-36</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>02/06/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>20:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. 02 DE MAYO ALTURA DEL GRIFO PRIMAX</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.146174</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.046022</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL PEATÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CRUCE INDEBIDO POR LA CALZADA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_44810c2b1e3ad90eceac50329f2a2160.setContent(html_8eef81486fd0e9b4a3a08916b5bb7bf0);
             
         
 
-        circle_marker_fa34b7fde9be40f808615c9bc4a888f2.bindPopup(popup_50deb5bb8720c973e34e8d0050135750)
+        circle_marker_56c6c13b88fed117b7d6125f9be73f90.bindPopup(popup_44810c2b1e3ad90eceac50329f2a2160)
         ;
 
         
     
     
-            var circle_marker_ad8cd8e3b8f9e5c101cc93bf8f01365a = L.circleMarker(
+            var circle_marker_9bd8b1103b367d1de292ade8025cb450 = L.circleMarker(
                 [-8.1466663, -79.0302184],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_8f6b289d45fcfe009be8be837d84a1d5 = L.popup({
+        var popup_3b2212e58bc9785c43f3c358268457f3 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_62ee216fdbe67dbbaeb433318436bff0 = $(`<div id="html_62ee216fdbe67dbbaeb433318436bff0" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-09-57</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/09/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>22:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 565.1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.1466663</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0302184</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_8f6b289d45fcfe009be8be837d84a1d5.setContent(html_62ee216fdbe67dbbaeb433318436bff0);
+                var html_ce8cf48c24effb134dd36ea6aa976259 = $(`<div id="html_ce8cf48c24effb134dd36ea6aa976259" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-09-57</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/09/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>22:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 565.1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.1466663</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0302184</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_3b2212e58bc9785c43f3c358268457f3.setContent(html_ce8cf48c24effb134dd36ea6aa976259);
             
         
 
-        circle_marker_ad8cd8e3b8f9e5c101cc93bf8f01365a.bindPopup(popup_8f6b289d45fcfe009be8be837d84a1d5)
+        circle_marker_9bd8b1103b367d1de292ade8025cb450.bindPopup(popup_3b2212e58bc9785c43f3c358268457f3)
         ;
 
         
     
     
-            var circle_marker_154eb924ae25dad39fd3b76aaf797095 = L.circleMarker(
+            var circle_marker_fee5f33353eb1a52fdb6d77980266238 = L.circleMarker(
                 [-8.142941314, -79.02747500593753],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_fc99d1c13d24bebfa61ab7a419d836f2 = L.popup({
+        var popup_e17930ef3cda6cced022f75681689e9e = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_4f5541c692bed97ff34ce3179e5539ac = $(`<div id="html_4f5541c692bed97ff34ce3179e5539ac" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-11-53</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/11/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>12:40</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142941314</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.02747500593753</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_fc99d1c13d24bebfa61ab7a419d836f2.setContent(html_4f5541c692bed97ff34ce3179e5539ac);
+                var html_e8932bf7646d434dadae4665b9526814 = $(`<div id="html_e8932bf7646d434dadae4665b9526814" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2023-11-53</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/11/2023</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>12:40</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETERA PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142941314</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.02747500593753</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_e17930ef3cda6cced022f75681689e9e.setContent(html_e8932bf7646d434dadae4665b9526814);
             
         
 
-        circle_marker_154eb924ae25dad39fd3b76aaf797095.bindPopup(popup_fc99d1c13d24bebfa61ab7a419d836f2)
+        circle_marker_fee5f33353eb1a52fdb6d77980266238.bindPopup(popup_e17930ef3cda6cced022f75681689e9e)
         ;
 
         
     
     
-            var circle_marker_a283b6afe343d45387e0ffaf76edcf7b = L.circleMarker(
+            var circle_marker_2067a3cb78a44796b8d8d31b6549d398 = L.circleMarker(
                 [-8.142941, -79.027475],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_854af496a1abae9598ff30948293d818 = L.popup({
+        var popup_d722f9b8138b602a8a549f5a67542789 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_64e0ca4f914ebecfda31e5985db23b33 = $(`<div id="html_64e0ca4f914ebecfda31e5985db23b33" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-01-22</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>14/01/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>05:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>4</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETER PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142941</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.027475</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_854af496a1abae9598ff30948293d818.setContent(html_64e0ca4f914ebecfda31e5985db23b33);
+                var html_28e980d764d208d99707e572797442ac = $(`<div id="html_28e980d764d208d99707e572797442ac" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-01-22</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>14/01/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>05:20</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>4</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>CARRETER PANAMERICANA NORTE ALTURA DEL KM. 566</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142941</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.027475</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL CONDUCTOR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CONDUCIR EN ESTADO DE EBRIEDAD Y/O DROGADICCIÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_d722f9b8138b602a8a549f5a67542789.setContent(html_28e980d764d208d99707e572797442ac);
             
         
 
-        circle_marker_a283b6afe343d45387e0ffaf76edcf7b.bindPopup(popup_854af496a1abae9598ff30948293d818)
+        circle_marker_2067a3cb78a44796b8d8d31b6549d398.bindPopup(popup_d722f9b8138b602a8a549f5a67542789)
         ;
 
         
     
     
-            var circle_marker_00219748d3a519634c07b8bb9b4f6275 = L.circleMarker(
+            var circle_marker_07e3fc3ff9da06be7259f874dda3bae9 = L.circleMarker(
                 [-8.140600574, -79.0524999253],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_17d6c67ee6afe8296a4d083b77ec0715 = L.popup({
+        var popup_74d23ced93efc48727d06bb3041fd895 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_c7b9faaed51dee7b45665a475345d403 = $(`<div id="html_c7b9faaed51dee7b45665a475345d403" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-05-44</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/05/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>09:45</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. 2 DE MAYO CON L AV. VICTOR LARCO HERRERA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.140600574</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0524999253</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL PEATÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CRUCE INDEBIDO POR LA CALZADA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_17d6c67ee6afe8296a4d083b77ec0715.setContent(html_c7b9faaed51dee7b45665a475345d403);
+                var html_0d11ec0ef95c0971b181b58ab22a06ce = $(`<div id="html_0d11ec0ef95c0971b181b58ab22a06ce" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-05-44</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>30/05/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>09:45</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. 2 DE MAYO CON L AV. VICTOR LARCO HERRERA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.140600574</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0524999253</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>IMPRUDENCIA DEL PEATÓN</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'>CRUCE INDEBIDO POR LA CALZADA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_74d23ced93efc48727d06bb3041fd895.setContent(html_0d11ec0ef95c0971b181b58ab22a06ce);
             
         
 
-        circle_marker_00219748d3a519634c07b8bb9b4f6275.bindPopup(popup_17d6c67ee6afe8296a4d083b77ec0715)
+        circle_marker_07e3fc3ff9da06be7259f874dda3bae9.bindPopup(popup_74d23ced93efc48727d06bb3041fd895)
         ;
 
         
     
     
-            var circle_marker_fb52ab7b3755103c380529e25bd1ba23 = L.circleMarker(
+            var circle_marker_c23d2fae7aabd491e115c75a2ae90050 = L.circleMarker(
                 [-8.143013367, -79.0547903821],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_619507839d00bee0f1542a6802252bfc = L.popup({
+        var popup_8720f7ff67ad49ef57ff7818e123063a = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_e9676dc0c97a35c134cf764822f2ee7a = $(`<div id="html_e9676dc0c97a35c134cf764822f2ee7a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-06-29</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>12/06/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>19:50</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. VICTOR LARCO HERRERA Y EL JR. DESAMPARADOS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.143013367</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0547903821</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_619507839d00bee0f1542a6802252bfc.setContent(html_e9676dc0c97a35c134cf764822f2ee7a);
+                var html_a6919b7f5bf6288e7c0d75f0ad74d21d = $(`<div id="html_a6919b7f5bf6288e7c0d75f0ad74d21d" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-06-29</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>12/06/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>19:50</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. VICTOR LARCO HERRERA Y EL JR. DESAMPARADOS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.143013367</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0547903821</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_8720f7ff67ad49ef57ff7818e123063a.setContent(html_a6919b7f5bf6288e7c0d75f0ad74d21d);
             
         
 
-        circle_marker_fb52ab7b3755103c380529e25bd1ba23.bindPopup(popup_619507839d00bee0f1542a6802252bfc)
+        circle_marker_c23d2fae7aabd491e115c75a2ae90050.bindPopup(popup_8720f7ff67ad49ef57ff7818e123063a)
         ;
 
         
     
     
-            var circle_marker_2278b2fdd8a886b9d129a97d47f29835 = L.circleMarker(
+            var circle_marker_2920d1cd578177882e9fbde73ad48f31 = L.circleMarker(
                 [-8.142346879, -79.0505004368],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_4daaf62aac1b4e42ecfa1288813cb6b9 = L.popup({
+        var popup_da9ba560891c5b9946e25e3c9a056d25 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_cdf66103b22822459749608ddaf97c4f = $(`<div id="html_cdf66103b22822459749608ddaf97c4f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-09-19</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>15/09/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>00:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. DOS DE MAYO CDRA. 10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>SAUNA LAS VEGAS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142346879</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0505004368</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_4daaf62aac1b4e42ecfa1288813cb6b9.setContent(html_cdf66103b22822459749608ddaf97c4f);
+                var html_db0688d2d59be62eb6e62e00d190f338 = $(`<div id="html_db0688d2d59be62eb6e62e00d190f338" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-09-19</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>15/09/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>00:00</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>ATROPELLO FUGA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>AV. DOS DE MAYO CDRA. 10</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>SAUNA LAS VEGAS</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.142346879</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.0505004368</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_da9ba560891c5b9946e25e3c9a056d25.setContent(html_db0688d2d59be62eb6e62e00d190f338);
             
         
 
-        circle_marker_2278b2fdd8a886b9d129a97d47f29835.bindPopup(popup_4daaf62aac1b4e42ecfa1288813cb6b9)
+        circle_marker_2920d1cd578177882e9fbde73ad48f31.bindPopup(popup_da9ba560891c5b9946e25e3c9a056d25)
         ;
 
         
     
     
-            var circle_marker_f8230da00c91b74c5c2cf4c086f93fb9 = L.circleMarker(
+            var circle_marker_4f72fe5e2f193ebb18d6c1f927992b15 = L.circleMarker(
                 [-8.129160268, -79.04269498662465],
                 {"bubblingMouseEvents": true, "color": "#d90429", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d90429", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_71d233d1f78bf214c01fefc4ab6a5b42);
+            ).addTo(feature_group_5ad070e6fa36ea2c85cae678eb140932);
         
     
-        var popup_83fc9879b31776d186f1d510acf8f99d = L.popup({
+        var popup_ab20af20581963e2535676bef8ced27a = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_fc76e622fa445d7f0c783aae3099c775 = $(`<div id="html_fc76e622fa445d7f0c783aae3099c775" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-11-33</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/11/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>11:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. LARCO CON LA CA. JUAN JULIO GANOZA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.129160268</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.04269498662465</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
-                popup_83fc9879b31776d186f1d510acf8f99d.setContent(html_fc76e622fa445d7f0c783aae3099c775);
+                var html_2bd2ec396619d52748e82259ee55073a = $(`<div id="html_2bd2ec396619d52748e82259ee55073a" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Siniestro fatal</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>COD_ACCIDE</th><td style='padding:2px 0;'>A-2024-11-33</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>FechaDelAccidente</th><td style='padding:2px 0;'>03/11/2024</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>HoraDelAccidente</th><td style='padding:2px 0;'>11:30</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>ClaseDelAccidente</th><td style='padding:2px 0;'>CHOQUE</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>SecuenciaAccidente</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeFallecidos</th><td style='padding:2px 0;'>1</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CantidadDeLesionados</th><td style='padding:2px 0;'>0</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Direccion</th><td style='padding:2px 0;'>INTERSECCION DE LA AV. LARCO CON LA CA. JUAN JULIO GANOZA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>LugarReferencia</th><td style='padding:2px 0;'>-</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>y</th><td style='padding:2px 0;'>-8.129160268</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>x</th><td style='padding:2px 0;'>-79.04269498662465</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CondClimatica</th><td style='padding:2px 0;'>DESPEJADO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaFactorPrincipal</th><td style='padding:2px 0;'>NO IDENTIFICA LA CAUSA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>CausaEspecifica</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>OtraCausa</th><td style='padding:2px 0;'></td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>Observaciones</th><td style='padding:2px 0;'></td></tr></table></div></div>`)[0];
+                popup_ab20af20581963e2535676bef8ced27a.setContent(html_2bd2ec396619d52748e82259ee55073a);
             
         
 
-        circle_marker_f8230da00c91b74c5c2cf4c086f93fb9.bindPopup(popup_83fc9879b31776d186f1d510acf8f99d)
+        circle_marker_4f72fe5e2f193ebb18d6c1f927992b15.bindPopup(popup_ab20af20581963e2535676bef8ced27a)
         ;
 
         
     
     
-            feature_group_71d233d1f78bf214c01fefc4ab6a5b42.addTo(map_707063178d904f651ae8585552e8310c);
+            feature_group_5ad070e6fa36ea2c85cae678eb140932.addTo(map_0c2f90ccaecfd495c2b81561637da184);
         
     
-            map_707063178d904f651ae8585552e8310c.fitBounds(
+            map_0c2f90ccaecfd495c2b81561637da184.fitBounds(
                 [[-8.13184, -79.051106], [-8.1291328, -79.0427043], [-8.1293843, -79.0429224], [-8.1412499, -79.0594322], [-8.1412915, -79.0593719], [-8.1414638, -79.0596132], [-8.1415097, -79.0595546], [-8.1429777, -79.0547783], [-8.1281469, -79.0407249], [-8.1430645, -79.0546698], [-8.129088, -79.0427684], [-8.1293355, -79.0429806], [-8.131527, -79.050961]],
                 {}
             );
         
     
-            var layer_control_4ed130feb12f89635fb72dc42e32992d_layers = {
+            var layer_control_31a0549778960e15cd61248a35e08e6b_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_84b489c7b6d65309625b24a53f071991,
+                    "openstreetmap" : tile_layer_10564fc2347e7110a61f43bf87f64db7,
                 },
                 overlays :  {
-                    "contorno" : feature_group_fe8f87328a48b797f549b39e7d92f567,
-                    "intersecciones: buffers (50m)" : feature_group_caa7f78efc1244e99b4c950540678d48,
-                    "intersecciones: puntos" : feature_group_43b92583c60a0a16a0a4c30f42433533,
-                    "siniestros fatales" : feature_group_71d233d1f78bf214c01fefc4ab6a5b42,
+                    "contorno" : feature_group_d4fe386a37ae939058ec4731e375784e,
+                    "intersecciones: buffers (50m)" : feature_group_a13439f51c3c42c3940bda0b4d10a744,
+                    "intersecciones: puntos" : feature_group_e4fc825675519170baece1c9884f50d3,
+                    "siniestros fatales" : feature_group_5ad070e6fa36ea2c85cae678eb140932,
                 },
             };
-            let layer_control_4ed130feb12f89635fb72dc42e32992d = L.control.layers(
-                layer_control_4ed130feb12f89635fb72dc42e32992d_layers.base_layers,
-                layer_control_4ed130feb12f89635fb72dc42e32992d_layers.overlays,
+            let layer_control_31a0549778960e15cd61248a35e08e6b = L.control.layers(
+                layer_control_31a0549778960e15cd61248a35e08e6b_layers.base_layers,
+                layer_control_31a0549778960e15cd61248a35e08e6b_layers.overlays,
                 {
   "position": "topright",
   "collapsed": true,
   "autoZIndex": true,
 }
-            ).addTo(map_707063178d904f651ae8585552e8310c);
+            ).addTo(map_0c2f90ccaecfd495c2b81561637da184);
 
         
-     
-        feature_group_43b92583c60a0a16a0a4c30f42433533.bringToFront();
-        feature_group_71d233d1f78bf214c01fefc4ab6a5b42.bringToFront();
+    
+        feature_group_e4fc825675519170baece1c9884f50d3.bringToFront();
+        feature_group_5ad070e6fa36ea2c85cae678eb140932.bringToFront();
+    
+    
+      (function() {
+        var puntosLayer = feature_group_e4fc825675519170baece1c9884f50d3;
+        var defaultColor = '#1d4ed8';
+        var hiliteColor  = '#f59e0b';
+
+        // ---------- Toggle colapsar/expandir ----------
+        var box = document.getElementById('zs_tools');
+        var btnToggle = document.getElementById('btn_toggle_box');
+        var saved = null;
+        try { saved = localStorage.getItem('zs_tools_collapsed'); } catch(e) {}
+        if (saved === '1') {
+          box.classList.add('collapsed');
+          btnToggle.textContent = '⯈ Mostrar';
+        }
+        function toggleBox() {
+          var collapsed = box.classList.toggle('collapsed');
+          btnToggle.textContent = collapsed ? '⯈ Mostrar' : '⯆ Ocultar';
+          try { localStorage.setItem('zs_tools_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+        btnToggle.addEventListener('click', toggleBox);
+
+        // ---------- Esperar a que el mapa esté disponible ----------
+        var ly_map = null;
+        function ensureMap(cb) {
+          var tries = 0;
+          (function wait() {
+            ly_map = (puntosLayer && puntosLayer._map) ? puntosLayer._map : null;
+            if (ly_map) { cb(); return; }
+            if (tries++ < 80) { setTimeout(wait, 50); }
+          })();
+        }
+
+        ensureMap(function initTools() {
+          // ---------- Utilidades ----------
+          function eachMarker(fn) {
+            if (!puntosLayer || !puntosLayer._layers) return;
+            Object.values(puntosLayer._layers).forEach(function(ly) {
+              if (ly && typeof ly.setStyle === 'function') fn(ly);
+            });
+          }
+
+          function getTooltipText(ly) {
+            try {
+              var t = ly.getTooltip();
+              return t ? String(t.getContent() || '').toLowerCase() : '';
+            } catch(e) { return ''; }
+          }
+
+          function clearHighlights() {
+            eachMarker(function(ly) {
+              ly.setStyle({ color: defaultColor, fillColor: defaultColor });
+            });
+          }
+
+          // ---------- Búsqueda ----------
+          function searchAndHighlight() {
+            var qn_raw = (document.getElementById('q_name').value || '');
+            var qc_raw = (document.getElementById('q_code').value || '');
+            var qn = qn_raw.toLowerCase();
+            var qc = qc_raw.toLowerCase();
+
+            var useName = qn_raw.trim().length > 0;
+            var useCode = qc_raw.trim().length > 0;
+
+            clearHighlights();
+            if (!useName && !useCode) return;
+
+            var matchedLatLngs = [];
+            eachMarker(function(ly) {
+              var txt = getTooltipText(ly); // "nombre | codigo"
+              var parts = txt.split('|', 2);
+              var nameTxt = (parts[0] || '').trim();
+              var codeTxt = (parts[1] || '').trim();
+
+              var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+              var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+              if (matchName || matchCode) {
+                ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+                if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+              }
+            });
+
+            if (matchedLatLngs.length > 0) {
+              var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+              try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+            }
+          }
+
+          document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+          document.getElementById('btn_clear').addEventListener('click', function() {
+            document.getElementById('q_name').value = '';
+            document.getElementById('q_code').value = '';
+            clearHighlights();
+          });
+          ['q_name','q_code'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+          });
+
+          // ---------- Pin por coordenadas ----------
+          var coordLayer = L.layerGroup().addTo(ly_map);
+          function goToXY() {
+            var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+            var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+            if (!isFinite(x) || !isFinite(y)) return;
+            coordLayer.clearLayers();
+            var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+            mk.addTo(coordLayer);
+            ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+          }
+          function clearXY() { coordLayer.clearLayers(); }
+          document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+          document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+          // ---------- Medición ----------
+          var measuring = false;
+          var mA = null, mB = null, mLine = null;
+
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2-lat1) * Math.PI/180;
+            var dLon = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2)*Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
+
+          function updateMeasure() {
+            if (!(mA && mB)) return;
+            var a = mA.getLatLng(), b = mB.getLatLng();
+            var d = haversine(a.lat, a.lng, b.lat, b.lng);
+            var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+            if (!mLine) {
+              mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+                .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+                .addTo(ly_map);
+            } else {
+              mLine.setLatLngs([a, b]);
+              mLine.setTooltipContent(txt);
+            }
+          }
+
+          function clearMeasure() {
+            if (mA) ly_map.removeLayer(mA); mA = null;
+            if (mB) ly_map.removeLayer(mB); mB = null;
+            if (mLine) ly_map.removeLayer(mLine); mLine = null;
+          }
+
+          function toggleMeasure() {
+            measuring = !measuring;
+            var stateSpan = document.getElementById('measure_state');
+            stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+            stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+            if (!measuring) {
+              clearMeasure();
+              ly_map.getContainer().style.cursor = '';
+              return;
+            }
+            ly_map.getContainer().style.cursor = 'crosshair';
+          }
+
+          document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+          ly_map.on('click', function(ev) {
+            if (!measuring) return;
+            if (!mA) {
+              mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+              mA.on('drag', updateMeasure);
+            } else if (!mB) {
+              mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+              mB.on('drag', updateMeasure);
+            } else {
+              mB.setLatLng(ev.latlng);
+            }
+            updateMeasure();
+          });
+
+          // ---------- Abrir vista actual en Google Maps ----------
+          function openInGoogleMaps() {
+            var c = ly_map.getCenter();
+            var z = ly_map.getZoom();
+            var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+            window.open(url, '_blank');
+          }
+          document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+        });
+      })();
     
 </script>
 </html>

@@ -6,8 +6,9 @@ maps_establecimientos.py  (Establecimientos de Salud + siniestros + contorno + b
 - Título del mapa = nombre del archivo .xlsx (sin extensión).
 - Buscador por nombre_establecimiento y codigo_unico (case-insensitive, contains, OR).
 - Buscador de coordenadas (X=longitud, Y=latitud).
-- Herramienta de medición (dos puntos arrastrables; distancia en metros, etiqueta sobre la línea).
+- Herramienta de medición (dos puntos arrastrables; distancia en metros/km, etiqueta sobre la línea).
 - Botón para abrir vista actual en Google Maps.
+- Caja de herramientas con botón Mostrar/Ocultar (estado persistente).
 """
 
 import argparse
@@ -256,39 +257,42 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     lon0 = float(df["longitud"].mean())
     m = folium.Map(location=[lat0, lon0], tiles="OpenStreetMap", zoom_start=14, control_scale=True)
 
-    # CSS (UI derecha + estilos etiqueta distancia)
-    m.get_root().html.add_child(folium.Element(f"""
+    # CSS (NO f-string)
+    m.get_root().html.add_child(folium.Element("""
     <style>
-      .leaflet-interactive.zs-buffer {{ pointer-events: none !important; }}
-      .searchbar-wrap {{
-        position: fixed; right: 20px; bottom: 140px;  /* encima de la leyenda */
+      .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
         z-index: 10000; background: rgba(255,255,255,0.95);
+        border: 1px solid #e5e7eb;
         padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
-        display:flex; flex-direction: column; gap:8px; min-width: 300px;
-      }}
-      .row-flex {{ display:flex; gap:8px; align-items:center; }}
-      .col-flex {{ display:flex; flex-direction:column; gap:8px; }}
-      .row-flex input, .col-flex input {{
-        border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1;
-      }}
-      .row-flex button, .col-flex button {{
-        border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer;
-      }}
-      .btn-dark  {{ background:#111827; color:#fff; }}
-      .btn-gray  {{ background:#6b7280; color:#fff; }}
-      .btn-green {{ background:#065f46; color:#fff; }}
-      .btn-red   {{ background:#991b1b; color:#fff; }}
-      .pill {{ font-size:12px; padding:4px 8px; border-radius:999px; }}
-      .hint {{ font-size:12px; color:#374151; }}
-      .dist-on-line {{
-        background: rgba(17,24,39,0.85);
-        color: #fff;
-        padding: 2px 6px;
-        border-radius: 6px;
-        font-size: 12px;
-        border: 1px solid rgba(255,255,255,0.2);
-      }}
+        display: flex; flex-direction: column; gap: 8px; min-width: 300px; max-width: 92vw;
+      }
+
+      .searchbar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .searchbar-title { font-weight: 700; font-size: 14px; color: #111827; }
+      .toggle-btn { border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; background: #111827; color: #fff; }
+      .tools-body { display: flex; flex-direction: column; gap: 8px; }
+
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input { border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1; }
+      .row-flex button, .col-flex button { border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer; }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line { background: rgba(17,24,39,0.85); color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+
+      .searchbar-wrap.collapsed { padding: 8px 10px; }
+      .searchbar-wrap.collapsed .tools-body { display: none; }
+
+      @media (max-width: 480px) {
+        .searchbar-wrap { right: 12px; bottom: 12px; min-width: 240px; }
+      }
     </style>
     """))
 
@@ -305,7 +309,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     m.add_child(fg_puntos)
     m.add_child(fg_siniestros)
 
-    # Contorno (plomo y 0.7 de transparencia => fillOpacity=0.3)
+    # Contorno
     target_ubi = to_ubigeo6(df["ubigeo_gestor"].dropna().iloc[0]) if "ubigeo_gestor" in df.columns and df["ubigeo_gestor"].notna().any() else None
     feats = []
     if target_ubi:
@@ -328,6 +332,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                 }
             ).add_to(fg_contorno)
 
+    # Establecimientos
     bounds = []
     for _, row in df.iterrows():
         lat = float(row["latitud"]); lon = float(row["longitud"])
@@ -354,14 +359,15 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
             fill=True,
             fill_color=COLOR_EST,
             fill_opacity=1.0,
-            popup=folium.Popup(build_popup_est(row), max_width=480),
+            popup=folium.Popup(build_popup_est(row), max_width=500),
         )
-        tooltip_text = f"{name_raw}".lower() + " | " + f"{code_raw}".lower()
+        tooltip_text = (name_raw or "").lower() + " | " + (code_raw or "").lower()
         folium.Tooltip(tooltip_text, sticky=False, opacity=0).add_to(marker)
         marker.add_to(fg_puntos)
 
         bounds.append((lat, lon))
 
+    # Siniestros dentro del contorno
     if feats and not siniestros_df.empty:
         for _, r in siniestros_df.iterrows():
             slat = float(r["__lat__"]); slon = float(r["__lon__"])
@@ -377,15 +383,14 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                     popup=folium.Popup(build_popup_siniestro(r), max_width=500),
                 ).add_to(fg_siniestros)
 
-    # --- Traer al frente capas ---
-    tpl_front = Template(f"""
-    {{% macro script(this, kwargs) %}}
-        {fg_puntos.get_name()}.bringToFront();
-        {fg_siniestros.get_name()}.bringToFront();
-    {{% endmacro %}}
-    """)
-    me_front = MacroElement()
-    me_front._template = tpl_front
+    # Traer al frente (Template sin f-string; reemplazo de marcadores)
+    tpl_front = Template("""
+    {% macro script(this, kwargs) %}
+        {{fg_puntos}}.bringToFront();
+        {{fg_siniestros}}.bringToFront();
+    {% endmacro %}
+    """.replace("{{fg_puntos}}", fg_puntos.get_name()).replace("{{fg_siniestros}}", fg_siniestros.get_name()))
+    me_front = MacroElement(); me_front._template = tpl_front
     m.get_root().add_child(me_front)
 
     if len(bounds) >= 2:
@@ -393,221 +398,249 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
 
     folium.LayerControl(collapsed=True).add_to(m)
 
-    # ---------- UI derecha: buscadores + coords + medir + Google Maps ----------
-    search_ui = Template(f"""
-    {{% macro html(this, kwargs) %}}
-      <div class="searchbar-wrap">
-        <!-- Buscador por nombre (arriba) y código (abajo) -->
-        <div class="col-flex">
-          <input id="q_name" type="text" placeholder="Buscar por nombre">
-          <input id="q_code" type="text" placeholder="Buscar por código">
+    # ---------- UI derecha: buscador + coords + medir + GMaps + Toggle ----------
+    # SIN f-string: inyección por concatenación y replace
+    tpl = """
+    {% macro html(this, kwargs) %}
+      <div class="searchbar-wrap" id="zs_tools">
+        <div class="searchbar-header">
+          <div class="searchbar-title">Herramientas</div>
+          <button id="btn_toggle_box" class="toggle-btn" title="Mostrar/Ocultar">⯆ Ocultar</button>
         </div>
-        <div class="row-flex">
-          <button id="btn_search" class="btn-dark">Buscar</button>
-          <button id="btn_clear" class="btn-gray">Limpiar</button>
-        </div>
-        <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
-        <!-- Coordenadas: Longitud (arriba) y Latitud (abajo) -->
-        <div class="col-flex" title="Coordenadas en grados decimales">
-          <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+
+        <div class="tools-body">
+          <div class="col-flex">
+            <input id="q_name" type="text" placeholder="Buscar por nombre">
+            <input id="q_code" type="text" placeholder="Buscar por código">
+          </div>
           <div class="row-flex">
-            <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
-            <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
-            <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            <button id="btn_search" class="btn-dark">Buscar</button>
+            <button id="btn_clear" class="btn-gray">Limpiar</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+
+          <div class="col-flex" title="Coordenadas en grados decimales">
+            <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+            <div class="row-flex">
+              <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+              <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+              <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+            <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
           </div>
         </div>
-        <div class="row-flex">
-          <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
-          <span id="measure_state" class="hint" style="color:#991b1b">Desactivado</span>
-        </div>
-        <div class="row-flex">
-          <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
-        </div>
       </div>
-    {{% endmacro %}}
+    {% endmacro %}
 
-    {{% macro script(this, kwargs) %}}
-      (function() {{
-        var puntosLayer = {fg_puntos.get_name()};
-        var defaultColor = "{COLOR_EST}";
-        var hiliteColor  = "{COLOR_HILITE}";
+    {% macro script(this, kwargs) %}
+      (function() {
+        var puntosLayer = __FG_PUNTOS__;
+        var defaultColor = '__COLOR_EST__';
+        var hiliteColor  = '__COLOR_HILITE__';
 
-        // --- helpers ---
-        function eachMarker(fn) {{
-          if (!puntosLayer || !puntosLayer._layers) return;
-          Object.values(puntosLayer._layers).forEach(function(ly) {{
-            if (ly && typeof ly.setStyle === 'function') fn(ly);
-          }});
-        }}
+        // ---------- Toggle colapsar/expandir ----------
+        var box = document.getElementById('zs_tools');
+        var btnToggle = document.getElementById('btn_toggle_box');
+        var saved = null;
+        try { saved = localStorage.getItem('zs_tools_collapsed'); } catch(e) {}
+        if (saved === '1') {
+          box.classList.add('collapsed');
+          btnToggle.textContent = '⯈ Mostrar';
+        }
+        function toggleBox() {
+          var collapsed = box.classList.toggle('collapsed');
+          btnToggle.textContent = collapsed ? '⯈ Mostrar' : '⯆ Ocultar';
+          try { localStorage.setItem('zs_tools_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+        btnToggle.addEventListener('click', toggleBox);
 
-        function getTooltipText(ly) {{
-          try {{
-            var t = ly.getTooltip();
-            return t ? String(t.getContent() || "").toLowerCase() : "";
-          }} catch(e) {{
-            return "";
-          }}
-        }}
+        // ---------- Esperar a que el mapa esté disponible ----------
+        var ly_map = null;
+        function ensureMap(cb) {
+          var tries = 0;
+          (function wait() {
+            ly_map = (puntosLayer && puntosLayer._map) ? puntosLayer._map : null;
+            if (ly_map) { cb(); return; }
+            if (tries++ < 80) { setTimeout(wait, 50); }
+          })();
+        }
 
-        function clearHighlights() {{
-          eachMarker(function(ly) {{ ly.setStyle({{ color: defaultColor, fillColor: defaultColor }}); }});
-        }}
+        ensureMap(function initTools() {
+          // ---------- Utilidades ----------
+          function eachMarker(fn) {
+            if (!puntosLayer || !puntosLayer._layers) return;
+            Object.values(puntosLayer._layers).forEach(function(ly) {
+              if (ly && typeof ly.setStyle === 'function') fn(ly);
+            });
+          }
 
-        // --- búsqueda por campos ---
-        function searchAndHighlight() {{
-          var qn_raw = (document.getElementById('q_name').value || "");
-          var qc_raw = (document.getElementById('q_code').value || "");
-          var qn = qn_raw.toLowerCase();
-          var qc = qc_raw.toLowerCase();
+          function getTooltipText(ly) {
+            try {
+              var t = ly.getTooltip();
+              return t ? String(t.getContent() || '').toLowerCase() : '';
+            } catch(e) { return ''; }
+          }
 
-          var useName = qn_raw.trim().length > 0;
-          var useCode = qc_raw.trim().length > 0;
+          function clearHighlights() {
+            eachMarker(function(ly) {
+              ly.setStyle({ color: defaultColor, fillColor: defaultColor });
+            });
+          }
 
-          clearHighlights();
-          if (!useName && !useCode) return;
+          // ---------- Búsqueda ----------
+          function searchAndHighlight() {
+            var qn_raw = (document.getElementById('q_name').value || '');
+            var qc_raw = (document.getElementById('q_code').value || '');
+            var qn = qn_raw.toLowerCase();
+            var qc = qc_raw.toLowerCase();
 
-          var matchedLatLngs = [];
-          eachMarker(function(ly) {{
-            var txt = getTooltipText(ly); // "nombre | codigo"
-            var parts = txt.split('|', 2);
-            var nameTxt = (parts[0] || '').trim();
-            var codeTxt = (parts[1] || '').trim();
+            var useName = qn_raw.trim().length > 0;
+            var useCode = qc_raw.trim().length > 0;
 
-            var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
-            var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+            clearHighlights();
+            if (!useName && !useCode) return;
 
-            if (matchName || matchCode) {{
-              ly.setStyle({{ color: hiliteColor, fillColor: hiliteColor }});
-              if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
-            }}
-          }});
+            var matchedLatLngs = [];
+            eachMarker(function(ly) {
+              var txt = getTooltipText(ly); // "nombre | codigo"
+              var parts = txt.split('|', 2);
+              var nameTxt = (parts[0] || '').trim();
+              var codeTxt = (parts[1] || '').trim();
 
-          if (matchedLatLngs.length > 0) {{
-            var group = L.featureGroup(matchedLatLngs.map(function(ll) {{ return L.marker(ll); }}));
-            try {{ ly_map.fitBounds(group.getBounds().pad(0.2)); }} catch(e) {{}}
-          }}
-        }}
+              var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+              var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
 
-        var ly_map = (function() {{
-          var _m = null;
-          try {{ _m = puntosLayer._map || null; }} catch(e) {{}}
-          return _m;
-        }})();
+              if (matchName || matchCode) {
+                ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+                if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+              }
+            });
 
-        document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
-        document.getElementById('btn_clear').addEventListener('click', function() {{
-          document.getElementById('q_name').value = "";
-          document.getElementById('q_code').value = "";
-          clearHighlights();
-        }});
-        ['q_name','q_code'].forEach(function(id) {{
-          var el = document.getElementById(id);
-          el.addEventListener('keydown', function(ev) {{ if (ev.key === 'Enter') searchAndHighlight(); }});
-        }});
+            if (matchedLatLngs.length > 0) {
+              var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+              try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+            }
+          }
 
-        // --- pin por coordenadas ---
-        var coordLayer = L.layerGroup().addTo(ly_map);
-        function goToXY() {{
-          var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
-          var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
-          if (!isFinite(x) || !isFinite(y)) return;
-          coordLayer.clearLayers();
-          var mk = L.marker([y, x], {{ draggable:false, title: 'Punto (Y,X): '+y+', '+x }});
-          mk.addTo(coordLayer);
-          ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
-        }}
-        function clearXY() {{ coordLayer.clearLayers(); }}
+          document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+          document.getElementById('btn_clear').addEventListener('click', function() {
+            document.getElementById('q_name').value = '';
+            document.getElementById('q_code').value = '';
+            clearHighlights();
+          });
+          ['q_name','q_code'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+          });
 
-        document.getElementById('btn_xy_go').addEventListener('click', goToXY);
-        document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+          // ---------- Pin por coordenadas ----------
+          var coordLayer = L.layerGroup().addTo(ly_map);
+          function goToXY() {
+            var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+            var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+            if (!isFinite(x) || !isFinite(y)) return;
+            coordLayer.clearLayers();
+            var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+            mk.addTo(coordLayer);
+            ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+          }
+          function clearXY() { coordLayer.clearLayers(); }
+          document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+          document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
 
-        // --- medición (dos puntos arrastrables + etiqueta sobre línea) ---
-        var measuring = false;
-        var mA = null, mB = null, mLine = null;
+          // ---------- Medición ----------
+          var measuring = false;
+          var mA = null, mB = null, mLine = null;
 
-        function haversine(lat1, lon1, lat2, lon2) {{
-          var R = 6371000; // m
-          var dLat = (lat2-lat1) * Math.PI/180;
-          var dLon = (lon2-lon1) * Math.PI/180;
-          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-                  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
-                  Math.sin(dLon/2)*Math.sin(dLon/2);
-          var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          return R * c;
-        }}
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2-lat1) * Math.PI/180;
+            var dLon = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2)*Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
 
-        function midPoint(a, b) {{
-          return L.latLng( (a.lat + b.lat)/2, (a.lng + b.lng)/2 );
-        }}
+          function updateMeasure() {
+            if (!(mA && mB)) return;
+            var a = mA.getLatLng(), b = mB.getLatLng();
+            var d = haversine(a.lat, a.lng, b.lat, b.lng);
+            var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
 
-        function updateMeasure() {{
-          if (!(mA && mB)) return;
-          var a = mA.getLatLng(), b = mB.getLatLng();
-          var d = haversine(a.lat, a.lng, b.lat, b.lng);
-          var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+            if (!mLine) {
+              mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+                .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+                .addTo(ly_map);
+            } else {
+              mLine.setLatLngs([a, b]);
+              mLine.setTooltipContent(txt);
+            }
+          }
 
-          if (!mLine) {{
-            mLine = L.polyline([a, b], {{ color: '#111827', weight: 3, dashArray: '6,4' }})
-              .bindTooltip(txt, {{ permanent:true, direction:'center', className:'dist-on-line' }})
-              .addTo(ly_map);
-          }} else {{
-            mLine.setLatLngs([a, b]);
-            mLine.setTooltipContent(txt);
-          }}
-        }}
+          function clearMeasure() {
+            if (mA) ly_map.removeLayer(mA); mA = null;
+            if (mB) ly_map.removeLayer(mB); mB = null;
+            if (mLine) ly_map.removeLayer(mLine); mLine = null;
+          }
 
-        function clearMeasure() {{
-          if (mA) ly_map.removeLayer(mA); mA = null;
-          if (mB) ly_map.removeLayer(mB); mB = null;
-          if (mLine) ly_map.removeLayer(mLine); mLine = null;
-        }}
+          function toggleMeasure() {
+            measuring = !measuring;
+            var stateSpan = document.getElementById('measure_state');
+            stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+            stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+            if (!measuring) {
+              clearMeasure();
+              ly_map.getContainer().style.cursor = '';
+              return;
+            }
+            ly_map.getContainer().style.cursor = 'crosshair';
+          }
 
-        function toggleMeasure() {{
-          measuring = !measuring;
-          var stateSpan = document.getElementById('measure_state');
-          stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
-          stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
-          if (!measuring) {{
-            clearMeasure();
-            ly_map.getContainer().style.cursor = '';
-            return;
-          }}
-          ly_map.getContainer().style.cursor = 'crosshair';
-        }}
+          document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
 
-        document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+          ly_map.on('click', function(ev) {
+            if (!measuring) return;
+            if (!mA) {
+              mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+              mA.on('drag', updateMeasure);
+            } else if (!mB) {
+              mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+              mB.on('drag', updateMeasure);
+            } else {
+              mB.setLatLng(ev.latlng);
+            }
+            updateMeasure();
+          });
 
-        ly_map.on('click', function(ev) {{
-          if (!measuring) return;
-          if (!mA) {{
-            mA = L.marker(ev.latlng, {{ draggable:true, title:'Punto A' }}).addTo(ly_map);
-            mA.on('drag', updateMeasure);
-          }} else if (!mB) {{
-            mB = L.marker(ev.latlng, {{ draggable:true, title:'Punto B' }}).addTo(ly_map);
-            mB.on('drag', updateMeasure);
-          }} else {{
-            // Si ya existen A y B, mover B al nuevo click
-            mB.setLatLng(ev.latlng);
-          }}
-          updateMeasure();
-        }});
+          // ---------- Abrir vista actual en Google Maps ----------
+          function openInGoogleMaps() {
+            var c = ly_map.getCenter();
+            var z = ly_map.getZoom();
+            var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+            window.open(url, '_blank');
+          }
+          document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+        });
+      })();
+    {% endmacro %}
+    """
+    tpl = tpl.replace("__FG_PUNTOS__", fg_puntos.get_name()) \
+             .replace("__COLOR_EST__", COLOR_EST) \
+             .replace("__COLOR_HILITE__", COLOR_HILITE)
 
-        // --- Abrir en Google Maps la vista actual ---
-        function openInGoogleMaps() {{
-          if (!ly_map) return;
-          var c = ly_map.getCenter();
-          var z = ly_map.getZoom();
-          // URL estilo @lat,lon,zoomz
-          var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
-          window.open(url, '_blank');
-        }}
-        document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
-
-      }})();
-    {{% endmacro %}}
-    """)
-    me_search = MacroElement()
-    me_search._template = search_ui
+    search_ui = Template(tpl)
+    me_search = MacroElement(); me_search._template = search_ui
     m.get_root().add_child(me_search)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -629,28 +662,22 @@ def write_index(index_path: Path, items):
 
 # ---------------- main ----------------
 def main():
-    ap = argparse.ArgumentParser(description="Generar mapas de Establecimientos (HTML) con contorno, siniestros y buscador.")
+    ap = argparse.ArgumentParser(description="Generar mapas de Establecimientos (HTML) con contorno, siniestros, buscador, medición y toggle.")
     ap.add_argument("--excels-dir",        default="./EstablecimientoSalud/excels")
     ap.add_argument("--out-dir",           default="./EstablecimientoSalud/maps")
-    ap.add_argument("--distritos-geojson", default="./Data/Distritos.geojson",
-                    help="GeoJSON de distritos (usa clave IDDIST).")
-    ap.add_argument("--provincias-geojson", nargs="+",
-                    default=["./Data/Provincias1.geojson", "./Data/Provincias2.geojson"],
-                    help="Uno o más GeoJSON de provincias (propiedad con 'ubigeo' o IDPROV).")
-    ap.add_argument("--siniestros-csv",    default="./Data/Siniestros.csv",
-                    help="CSV de siniestros con columnas lat/lon (latitud/longitud, etc.).")
+    ap.add_argument("--distritos-geojson", default="./Data/Distritos.geojson", help="GeoJSON de distritos (usa clave IDDIST).")
+    ap.add_argument("--provincias-geojson", nargs="+", default=["./Data/Provincias1.geojson", "./Data/Provincias2.geojson"], help="Uno o más GeoJSON de provincias (propiedad con 'ubigeo' o IDPROV).")
+    ap.add_argument("--siniestros-csv",    default="./Data/Siniestros.csv", help="CSV de siniestros con columnas lat/lon (latitud/longitud, etc.).")
     args = ap.parse_args()
 
     excels_root = Path(args.excels_dir)
     out_root    = Path(args.out_dir)
 
-    # GeoJSON distritos
     distritos_path = Path(args.distritos_geojson)
     assert distritos_path.exists(), f"No existe: {distritos_path}"
     with distritos_path.open("r", encoding="utf-8") as f:
         distritos_gj = json.load(f)
 
-    # GeoJSON provincias
     provincias_gj_list = []
     for p in args.provincias_geojson:
         pp = Path(p)
@@ -658,7 +685,6 @@ def main():
         with pp.open("r", encoding="utf-8") as f:
             provincias_gj_list.append(json.load(f))
 
-    # Siniestros
     siniestros_path = Path(args.siniestros_csv)
     assert siniestros_path.exists(), f"No existe: {siniestros_path}"
     siniestros_df = load_siniestros_csv(siniestros_path)
@@ -667,6 +693,10 @@ def main():
     if not excel_files:
         print(f"No se encontraron .xlsx en {excels_root.resolve()}")
         return
+
+    # --- SOLO EL PRIMERO (quitar para procesar todos) ---
+    #excel_files = excel_files[:1]
+    #print(f"Procesando solo el primer archivo: {excel_files[0].name}")
 
     generated = []
     for x in excel_files:

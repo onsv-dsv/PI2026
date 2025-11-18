@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_90eed9569047f77dacadf3ad86020da0 {
+                #map_47bb3e3524458ede51c973e7553ab9ee {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,6 +56,38 @@
     
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        border: 1px solid #e5e7eb;
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display: flex; flex-direction: column; gap: 8px; min-width: 300px; max-width: 92vw;
+      }
+
+      .searchbar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .searchbar-title { font-weight: 700; font-size: 14px; color: #111827; }
+      .toggle-btn { border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; background: #111827; color: #fff; }
+      .tools-body { display: flex; flex-direction: column; gap: 8px; }
+
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input { border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1; }
+      .row-flex button, .col-flex button { border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer; }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line { background: rgba(17,24,39,0.85); color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+
+      .searchbar-wrap.collapsed { padding: 8px 10px; }
+      .searchbar-wrap.collapsed .tools-body { display: none; }
+
+      @media (max-width: 480px) {
+        .searchbar-wrap { right: 12px; bottom: 12px; min-width: 240px; }
+      }
     </style>
     
     
@@ -69,11 +101,11 @@
     </div>
     
     
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
@@ -90,14 +122,53 @@
     </div>
     
     
-            <div class="folium-map" id="map_90eed9569047f77dacadf3ad86020da0" ></div>
+            <div class="folium-map" id="map_47bb3e3524458ede51c973e7553ab9ee" ></div>
         
+    
+      <div class="searchbar-wrap" id="zs_tools">
+        <div class="searchbar-header">
+          <div class="searchbar-title">Herramientas</div>
+          <button id="btn_toggle_box" class="toggle-btn" title="Mostrar/Ocultar">⯆ Ocultar</button>
+        </div>
+
+        <div class="tools-body">
+          <div class="col-flex">
+            <input id="q_name" type="text" placeholder="Buscar por nombre">
+            <input id="q_code" type="text" placeholder="Buscar por código">
+          </div>
+          <div class="row-flex">
+            <button id="btn_search" class="btn-dark">Buscar</button>
+            <button id="btn_clear" class="btn-gray">Limpiar</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+
+          <div class="col-flex" title="Coordenadas en grados decimales">
+            <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+            <div class="row-flex">
+              <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+              <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+              <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+            </div>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+            <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+          </div>
+
+          <div class="row-flex">
+            <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+          </div>
+        </div>
+      </div>
+    
 </body>
 <script>
     
     
-            var map_90eed9569047f77dacadf3ad86020da0 = L.map(
-                "map_90eed9569047f77dacadf3ad86020da0",
+            var map_47bb3e3524458ede51c973e7553ab9ee = L.map(
+                "map_47bb3e3524458ede51c973e7553ab9ee",
                 {
                     center: [-11.480350999999999, -74.46213858333334],
                     crs: L.CRS.EPSG3857,
@@ -109,13 +180,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_90eed9569047f77dacadf3ad86020da0);
+            L.control.scale().addTo(map_47bb3e3524458ede51c973e7553ab9ee);
 
             
 
         
     
-            var tile_layer_4f0b5ef5259719ed47e758fa32537358 = L.tileLayer(
+            var tile_layer_d03c65f4fd371a77ccb830cb3b4447d2 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -132,424 +203,752 @@
             );
         
     
-            tile_layer_4f0b5ef5259719ed47e758fa32537358.addTo(map_90eed9569047f77dacadf3ad86020da0);
+            tile_layer_d03c65f4fd371a77ccb830cb3b4447d2.addTo(map_47bb3e3524458ede51c973e7553ab9ee);
         
     
-            var feature_group_7e55b96bcc6a02a44992c21951472ec8 = L.featureGroup(
+            var feature_group_5d402a002e2ccae8c30518fd680b1110 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_7e55b96bcc6a02a44992c21951472ec8.addTo(map_90eed9569047f77dacadf3ad86020da0);
+            feature_group_5d402a002e2ccae8c30518fd680b1110.addTo(map_47bb3e3524458ede51c973e7553ab9ee);
         
     
-            var feature_group_a7c17c45d8cd67f1a267b7c966be5f16 = L.featureGroup(
+            var feature_group_dfee26f989eeee6a62d0b35d4a5b5a99 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_4f8e1bd7e50a0eb9f38364f08d28108f = L.circle(
+            var circle_d0700777f898b30cf121039c7395e2af = L.circle(
                 [-11.4333, -74.4853],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_92d3a3787d57497f1e7293d24d876fdb = L.circle(
+            var circle_e06c701b263dfc873a4cada24427c162 = L.circle(
                 [-11.4334, -74.4832],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_d215c3fd1385edb2d914120304f18093 = L.circle(
+            var circle_2a6c5e9d1b15a86215f7f30b9e6b1c71 = L.circle(
                 [-11.430946, -74.487804],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_2491d404b4cf3a43397dc2c8e068049f = L.circle(
+            var circle_f45a9768a13eb20806da2afa718e150c = L.circle(
                 [-11.580691, -74.407473],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_712973a2dc72ae58ac0d3d0e2c7de282 = L.circle(
+            var circle_215f589a81950bbf3d4925185cdd96d5 = L.circle(
                 [-11.6467, -74.3715],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_9a6be4c2ea853413e77f096427ca5ade = L.circle(
+            var circle_b7b277985091883241c079c85bf70756 = L.circle(
                 [-11.6477, -74.3689],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_b036d5dbf196053e0413e81ddfe517f5 = L.circle(
+            var circle_87fcf771792e03b9fbbf5a963d87dd51 = L.circle(
                 [-11.435996, -74.493294],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_49f38ed0bbb429a029dd645a6db94653 = L.circle(
+            var circle_8752d4bb71e8f3360b0feebb25e87590 = L.circle(
                 [-11.4236, -74.48715],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_ddac671fca9190ee9f044faae8b4c3be = L.circle(
+            var circle_1a287d542eb9dbb5b55658933134ff0b = L.circle(
                 [-11.437829, -74.490172],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_be9948e4a5b1b935aa6ea490dc15f18b = L.circle(
+            var circle_c2d1b120dffb29c5dff7586213017f40 = L.circle(
                 [-11.43002, -74.48904],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_f417886c7724ade37d7a8a73c8040d7b = L.circle(
+            var circle_f66ab874e697e610c83e8bc274736c13 = L.circle(
                 [-11.42922, -74.49333],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            var circle_188c8df05812a17b50e87d4085459edf = L.circle(
+            var circle_a81b7311b15e8c177ed2e17605b16bc5 = L.circle(
                 [-11.43481, -74.4885],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_a7c17c45d8cd67f1a267b7c966be5f16);
+            ).addTo(feature_group_dfee26f989eeee6a62d0b35d4a5b5a99);
         
     
-            feature_group_a7c17c45d8cd67f1a267b7c966be5f16.addTo(map_90eed9569047f77dacadf3ad86020da0);
+            feature_group_dfee26f989eeee6a62d0b35d4a5b5a99.addTo(map_47bb3e3524458ede51c973e7553ab9ee);
         
     
-            var feature_group_d98dff8b67b7355f56921baf17c37649 = L.featureGroup(
+            var feature_group_d56bd32fe635e2efa64ff11b870e5bd1 = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_5d9416e3b31634a3511e91b204b0ffcb = L.circleMarker(
+            var circle_marker_368e348b72d7e01b3116341f2c0505dc = L.circleMarker(
                 [-11.4333, -74.4853],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_2c054000b38ff547aa2e312b04fae2ef = L.popup({
-  "maxWidth": 400,
+        var popup_b04b880a2825100736dba96c0b3325b6 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_00db95b9c4d5abe825dcc4565e775171 = $(`<div id="html_00db95b9c4d5abe825dcc4565e775171" style="width: 100.0%; height: 100.0%;"><b>241</b><br>Código CE: 241085<br>UBIGEO gestor: 120606<br>Alumnos: 263<br>Docentes: 12<br>Siniestros: 0</div>`)[0];
-                popup_2c054000b38ff547aa2e312b04fae2ef.setContent(html_00db95b9c4d5abe825dcc4565e775171);
+                var html_ac44201f1a83f5e94500f313d79b0e99 = $(`<div id="html_ac44201f1a83f5e94500f313d79b0e99" style="width: 100.0%; height: 100.0%;"><b>241</b><br>Código CE: 241085<br>UBIGEO gestor: 120606<br>Latitud: -11.4333<br>Longitud: -74.4853<br>Alumnos: 263<br>Docentes: 12<br>Siniestros: 0</div>`)[0];
+                popup_b04b880a2825100736dba96c0b3325b6.setContent(html_ac44201f1a83f5e94500f313d79b0e99);
             
         
 
-        circle_marker_5d9416e3b31634a3511e91b204b0ffcb.bindPopup(popup_2c054000b38ff547aa2e312b04fae2ef)
+        circle_marker_368e348b72d7e01b3116341f2c0505dc.bindPopup(popup_b04b880a2825100736dba96c0b3325b6)
         ;
 
         
     
     
-            var circle_marker_37ff4a7b07caafd692957403a11bd7ff = L.circleMarker(
+            circle_marker_368e348b72d7e01b3116341f2c0505dc.bindTooltip(
+                `<div>
+                     241 | 241085
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_53f9e63da42ab0c5ccbca27eb43df274 = L.circleMarker(
                 [-11.4334, -74.4832],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_810e26a13f5a360f50014b87caa6cec3 = L.popup({
-  "maxWidth": 400,
+        var popup_52e428df540cd05ff16c1bd4f0cd43b4 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_7f8bce07668b56c108dc03d00978ebad = $(`<div id="html_7f8bce07668b56c108dc03d00978ebad" style="width: 100.0%; height: 100.0%;"><b>30636</b><br>Código CE: 241231<br>UBIGEO gestor: 120606<br>Alumnos: 995<br>Docentes: 36<br>Siniestros: 0</div>`)[0];
-                popup_810e26a13f5a360f50014b87caa6cec3.setContent(html_7f8bce07668b56c108dc03d00978ebad);
+                var html_0c0ed36e9497b36100a69e7b501f01a2 = $(`<div id="html_0c0ed36e9497b36100a69e7b501f01a2" style="width: 100.0%; height: 100.0%;"><b>30636</b><br>Código CE: 241231<br>UBIGEO gestor: 120606<br>Latitud: -11.4334<br>Longitud: -74.4832<br>Alumnos: 995<br>Docentes: 36<br>Siniestros: 0</div>`)[0];
+                popup_52e428df540cd05ff16c1bd4f0cd43b4.setContent(html_0c0ed36e9497b36100a69e7b501f01a2);
             
         
 
-        circle_marker_37ff4a7b07caafd692957403a11bd7ff.bindPopup(popup_810e26a13f5a360f50014b87caa6cec3)
+        circle_marker_53f9e63da42ab0c5ccbca27eb43df274.bindPopup(popup_52e428df540cd05ff16c1bd4f0cd43b4)
         ;
 
         
     
     
-            var circle_marker_169557d7a2d8c73f8c03311195374a63 = L.circleMarker(
+            circle_marker_53f9e63da42ab0c5ccbca27eb43df274.bindTooltip(
+                `<div>
+                     30636 | 241231
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_d5d2ecc0e99522b105efbdc54acd3d1e = L.circleMarker(
                 [-11.430946, -74.487804],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_2f7cb52b13582b9080d229fbee5049d2 = L.popup({
-  "maxWidth": 400,
+        var popup_cc033c9e3068ae5183e42af0ae5f32c4 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_c06d035f535e741e686be502db824d89 = $(`<div id="html_c06d035f535e741e686be502db824d89" style="width: 100.0%; height: 100.0%;"><b>30637 ANDRES AVELINO CACERES</b><br>Código CE: 241245<br>UBIGEO gestor: 120606<br>Alumnos: 1503<br>Docentes: 63<br>Siniestros: 0</div>`)[0];
-                popup_2f7cb52b13582b9080d229fbee5049d2.setContent(html_c06d035f535e741e686be502db824d89);
+                var html_f6f7411de55dd942d5cbe63e04a42ad7 = $(`<div id="html_f6f7411de55dd942d5cbe63e04a42ad7" style="width: 100.0%; height: 100.0%;"><b>30637 ANDRES AVELINO CACERES</b><br>Código CE: 241245<br>UBIGEO gestor: 120606<br>Latitud: -11.430946<br>Longitud: -74.487804<br>Alumnos: 1503<br>Docentes: 63<br>Siniestros: 0</div>`)[0];
+                popup_cc033c9e3068ae5183e42af0ae5f32c4.setContent(html_f6f7411de55dd942d5cbe63e04a42ad7);
             
         
 
-        circle_marker_169557d7a2d8c73f8c03311195374a63.bindPopup(popup_2f7cb52b13582b9080d229fbee5049d2)
+        circle_marker_d5d2ecc0e99522b105efbdc54acd3d1e.bindPopup(popup_cc033c9e3068ae5183e42af0ae5f32c4)
         ;
 
         
     
     
-            var circle_marker_0b22ce6b741769afbeb3ee1f7254c13a = L.circleMarker(
+            circle_marker_d5d2ecc0e99522b105efbdc54acd3d1e.bindTooltip(
+                `<div>
+                     30637 andres avelino caceres | 241245
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_2fa26d353684c42ab3bea68e07111302 = L.circleMarker(
                 [-11.580691, -74.407473],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_3591cb713a1e5367ec9d694ab19f40bc = L.popup({
-  "maxWidth": 400,
+        var popup_672af8b00d55aaf51b97c20bd1ed083b = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_393d12856120bd573a997cde48ab1dc7 = $(`<div id="html_393d12856120bd573a997cde48ab1dc7" style="width: 100.0%; height: 100.0%;"><b>30671</b><br>Código CE: 241269<br>UBIGEO gestor: 120606<br>Alumnos: 256<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
-                popup_3591cb713a1e5367ec9d694ab19f40bc.setContent(html_393d12856120bd573a997cde48ab1dc7);
+                var html_01ec0807e728475ec75edab1d5789a38 = $(`<div id="html_01ec0807e728475ec75edab1d5789a38" style="width: 100.0%; height: 100.0%;"><b>30671</b><br>Código CE: 241269<br>UBIGEO gestor: 120606<br>Latitud: -11.580691<br>Longitud: -74.407473<br>Alumnos: 256<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
+                popup_672af8b00d55aaf51b97c20bd1ed083b.setContent(html_01ec0807e728475ec75edab1d5789a38);
             
         
 
-        circle_marker_0b22ce6b741769afbeb3ee1f7254c13a.bindPopup(popup_3591cb713a1e5367ec9d694ab19f40bc)
+        circle_marker_2fa26d353684c42ab3bea68e07111302.bindPopup(popup_672af8b00d55aaf51b97c20bd1ed083b)
         ;
 
         
     
     
-            var circle_marker_4b71744228032d2883f1bb132de11f68 = L.circleMarker(
+            circle_marker_2fa26d353684c42ab3bea68e07111302.bindTooltip(
+                `<div>
+                     30671 | 241269
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_9733bc53126246335dea041b330e8028 = L.circleMarker(
                 [-11.6467, -74.3715],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_3094cde8316e321926e5bfad090b241b = L.popup({
-  "maxWidth": 400,
+        var popup_741d7a0178ec686ed400ca7c6ce55bc8 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_2a16803fec054474e23c4f93c59136c4 = $(`<div id="html_2a16803fec054474e23c4f93c59136c4" style="width: 100.0%; height: 100.0%;"><b>30675</b><br>Código CE: 241306<br>UBIGEO gestor: 120606<br>Alumnos: 253<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
-                popup_3094cde8316e321926e5bfad090b241b.setContent(html_2a16803fec054474e23c4f93c59136c4);
+                var html_84e6db2fd970fc9d498638a6c4298ad6 = $(`<div id="html_84e6db2fd970fc9d498638a6c4298ad6" style="width: 100.0%; height: 100.0%;"><b>30675</b><br>Código CE: 241306<br>UBIGEO gestor: 120606<br>Latitud: -11.6467<br>Longitud: -74.3715<br>Alumnos: 253<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
+                popup_741d7a0178ec686ed400ca7c6ce55bc8.setContent(html_84e6db2fd970fc9d498638a6c4298ad6);
             
         
 
-        circle_marker_4b71744228032d2883f1bb132de11f68.bindPopup(popup_3094cde8316e321926e5bfad090b241b)
+        circle_marker_9733bc53126246335dea041b330e8028.bindPopup(popup_741d7a0178ec686ed400ca7c6ce55bc8)
         ;
 
         
     
     
-            var circle_marker_204a9d1c19dafa29512369b2a211c7ef = L.circleMarker(
+            circle_marker_9733bc53126246335dea041b330e8028.bindTooltip(
+                `<div>
+                     30675 | 241306
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_bc1dded113e9c8e9c28256ce50c2653a = L.circleMarker(
                 [-11.6477, -74.3689],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_32153f5464ee2e53c522f5c4512bee5f = L.popup({
-  "maxWidth": 400,
+        var popup_0918a42ff9f208f12fa7eaf66587a844 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_6d8cbd77fee5049563828d57a25a780b = $(`<div id="html_6d8cbd77fee5049563828d57a25a780b" style="width: 100.0%; height: 100.0%;"><b>SAN JUAN</b><br>Código CE: 241801<br>UBIGEO gestor: 120606<br>Alumnos: 285<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
-                popup_32153f5464ee2e53c522f5c4512bee5f.setContent(html_6d8cbd77fee5049563828d57a25a780b);
+                var html_2429b3bb4d3e8577ce075d145c4f250b = $(`<div id="html_2429b3bb4d3e8577ce075d145c4f250b" style="width: 100.0%; height: 100.0%;"><b>SAN JUAN</b><br>Código CE: 241801<br>UBIGEO gestor: 120606<br>Latitud: -11.6477<br>Longitud: -74.3689<br>Alumnos: 285<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
+                popup_0918a42ff9f208f12fa7eaf66587a844.setContent(html_2429b3bb4d3e8577ce075d145c4f250b);
             
         
 
-        circle_marker_204a9d1c19dafa29512369b2a211c7ef.bindPopup(popup_32153f5464ee2e53c522f5c4512bee5f)
+        circle_marker_bc1dded113e9c8e9c28256ce50c2653a.bindPopup(popup_0918a42ff9f208f12fa7eaf66587a844)
         ;
 
         
     
     
-            var circle_marker_1ff9d26344e4c242de52a3bd8fe88dc9 = L.circleMarker(
+            circle_marker_bc1dded113e9c8e9c28256ce50c2653a.bindTooltip(
+                `<div>
+                     san juan | 241801
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_91d132c080a312d6dd9df5f80a967061 = L.circleMarker(
                 [-11.435996, -74.493294],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_3565d762ad265421674cac5b7c5d4ec9 = L.popup({
-  "maxWidth": 400,
+        var popup_4dd931022b22dd26e0c468cc4163f286 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_80f454f063808b19587f9b68357d58d9 = $(`<div id="html_80f454f063808b19587f9b68357d58d9" style="width: 100.0%; height: 100.0%;"><b>COOPERATIVO PANGOA</b><br>Código CE: 242315<br>UBIGEO gestor: 120606<br>Alumnos: 272<br>Docentes: 4<br>Siniestros: 0</div>`)[0];
-                popup_3565d762ad265421674cac5b7c5d4ec9.setContent(html_80f454f063808b19587f9b68357d58d9);
+                var html_bb2af01336c312bf67238d21dae6b64e = $(`<div id="html_bb2af01336c312bf67238d21dae6b64e" style="width: 100.0%; height: 100.0%;"><b>COOPERATIVO PANGOA</b><br>Código CE: 242315<br>UBIGEO gestor: 120606<br>Latitud: -11.435996<br>Longitud: -74.493294<br>Alumnos: 272<br>Docentes: 4<br>Siniestros: 0</div>`)[0];
+                popup_4dd931022b22dd26e0c468cc4163f286.setContent(html_bb2af01336c312bf67238d21dae6b64e);
             
         
 
-        circle_marker_1ff9d26344e4c242de52a3bd8fe88dc9.bindPopup(popup_3565d762ad265421674cac5b7c5d4ec9)
+        circle_marker_91d132c080a312d6dd9df5f80a967061.bindPopup(popup_4dd931022b22dd26e0c468cc4163f286)
         ;
 
         
     
     
-            var circle_marker_b837667e58ca21bed97ee528fde8e08f = L.circleMarker(
+            circle_marker_91d132c080a312d6dd9df5f80a967061.bindTooltip(
+                `<div>
+                     cooperativo pangoa | 242315
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_f28fbac0341694578c5b41daa61e60f7 = L.circleMarker(
                 [-11.4236, -74.48715],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_23f186cfd20de0dd0b8479ada2bf5434 = L.popup({
-  "maxWidth": 400,
+        var popup_611a3f983d47fed65bb1d2a20f7445da = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_21b8a60c8ea1079a10af157b19c104be = $(`<div id="html_21b8a60c8ea1079a10af157b19c104be" style="width: 100.0%; height: 100.0%;"><b>JORGE CHAVEZ</b><br>Código CE: 242320<br>UBIGEO gestor: 120606<br>Alumnos: 229<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
-                popup_23f186cfd20de0dd0b8479ada2bf5434.setContent(html_21b8a60c8ea1079a10af157b19c104be);
+                var html_db0dddd3e2e4bcc931d9f394df904a1d = $(`<div id="html_db0dddd3e2e4bcc931d9f394df904a1d" style="width: 100.0%; height: 100.0%;"><b>JORGE CHAVEZ</b><br>Código CE: 242320<br>UBIGEO gestor: 120606<br>Latitud: -11.4236<br>Longitud: -74.48715<br>Alumnos: 229<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
+                popup_611a3f983d47fed65bb1d2a20f7445da.setContent(html_db0dddd3e2e4bcc931d9f394df904a1d);
             
         
 
-        circle_marker_b837667e58ca21bed97ee528fde8e08f.bindPopup(popup_23f186cfd20de0dd0b8479ada2bf5434)
+        circle_marker_f28fbac0341694578c5b41daa61e60f7.bindPopup(popup_611a3f983d47fed65bb1d2a20f7445da)
         ;
 
         
     
     
-            var circle_marker_23de5077fce044ba807fc0d278636476 = L.circleMarker(
+            circle_marker_f28fbac0341694578c5b41daa61e60f7.bindTooltip(
+                `<div>
+                     jorge chavez | 242320
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_2c6c0b5e460a2a40a200c44e57baba8b = L.circleMarker(
                 [-11.437829, -74.490172],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_c9df4a91dc5ed6faa5a11a843966bf7d = L.popup({
-  "maxWidth": 400,
+        var popup_49cfbc70d85d328e860ed0778a32b765 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_2bd11b0f4830abfb464e2e8e3ef119e3 = $(`<div id="html_2bd11b0f4830abfb464e2e8e3ef119e3" style="width: 100.0%; height: 100.0%;"><b>SAN DANIEL</b><br>Código CE: 652958<br>UBIGEO gestor: 120606<br>Alumnos: 888<br>Docentes: 41<br>Siniestros: 0</div>`)[0];
-                popup_c9df4a91dc5ed6faa5a11a843966bf7d.setContent(html_2bd11b0f4830abfb464e2e8e3ef119e3);
+                var html_2ea2c7edb545b3efac462281654f7c5f = $(`<div id="html_2ea2c7edb545b3efac462281654f7c5f" style="width: 100.0%; height: 100.0%;"><b>SAN DANIEL</b><br>Código CE: 652958<br>UBIGEO gestor: 120606<br>Latitud: -11.437829<br>Longitud: -74.490172<br>Alumnos: 888<br>Docentes: 41<br>Siniestros: 0</div>`)[0];
+                popup_49cfbc70d85d328e860ed0778a32b765.setContent(html_2ea2c7edb545b3efac462281654f7c5f);
             
         
 
-        circle_marker_23de5077fce044ba807fc0d278636476.bindPopup(popup_c9df4a91dc5ed6faa5a11a843966bf7d)
+        circle_marker_2c6c0b5e460a2a40a200c44e57baba8b.bindPopup(popup_49cfbc70d85d328e860ed0778a32b765)
         ;
 
         
     
     
-            var circle_marker_08e31afd58a657a8d46a1b2758cd2676 = L.circleMarker(
+            circle_marker_2c6c0b5e460a2a40a200c44e57baba8b.bindTooltip(
+                `<div>
+                     san daniel | 652958
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_7d765a1fcf35e143435e1cfae9d6201d = L.circleMarker(
                 [-11.43002, -74.48904],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_973f6716b5154f1d7c2bb27835383141 = L.popup({
-  "maxWidth": 400,
+        var popup_b784fe0e758b762e3ba68b3b4da35474 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_c113eab18aea2d164d320eb63a42ab7c = $(`<div id="html_c113eab18aea2d164d320eb63a42ab7c" style="width: 100.0%; height: 100.0%;"><b>HORIZONTE - SAC</b><br>Código CE: 722273<br>UBIGEO gestor: 120606<br>Alumnos: 279<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
-                popup_973f6716b5154f1d7c2bb27835383141.setContent(html_c113eab18aea2d164d320eb63a42ab7c);
+                var html_752756be7f76fbbe8c5c84a4733901d5 = $(`<div id="html_752756be7f76fbbe8c5c84a4733901d5" style="width: 100.0%; height: 100.0%;"><b>HORIZONTE - SAC</b><br>Código CE: 722273<br>UBIGEO gestor: 120606<br>Latitud: -11.43002<br>Longitud: -74.48904<br>Alumnos: 279<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
+                popup_b784fe0e758b762e3ba68b3b4da35474.setContent(html_752756be7f76fbbe8c5c84a4733901d5);
             
         
 
-        circle_marker_08e31afd58a657a8d46a1b2758cd2676.bindPopup(popup_973f6716b5154f1d7c2bb27835383141)
+        circle_marker_7d765a1fcf35e143435e1cfae9d6201d.bindPopup(popup_b784fe0e758b762e3ba68b3b4da35474)
         ;
 
         
     
     
-            var circle_marker_377be76d9c3cceea70072db4be1ec029 = L.circleMarker(
+            circle_marker_7d765a1fcf35e143435e1cfae9d6201d.bindTooltip(
+                `<div>
+                     horizonte - sac | 722273
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_5b93feb7a313f48fe49e2e39e597d1f4 = L.circleMarker(
                 [-11.42922, -74.49333],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_de859fd6bd283de4dd0428697857564d = L.popup({
-  "maxWidth": 400,
+        var popup_b518923ce1f771ae0d0f60a0811caab8 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_64fb045e1cf31f9766f691c91cd67a13 = $(`<div id="html_64fb045e1cf31f9766f691c91cd67a13" style="width: 100.0%; height: 100.0%;"><b>CIENTIFICA DEL VRAEM</b><br>Código CE: 756531<br>UBIGEO gestor: 120606<br>Alumnos: 275<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
-                popup_de859fd6bd283de4dd0428697857564d.setContent(html_64fb045e1cf31f9766f691c91cd67a13);
+                var html_b56680ea4271f9f6fe7123178e331a09 = $(`<div id="html_b56680ea4271f9f6fe7123178e331a09" style="width: 100.0%; height: 100.0%;"><b>CIENTIFICA DEL VRAEM</b><br>Código CE: 756531<br>UBIGEO gestor: 120606<br>Latitud: -11.42922<br>Longitud: -74.49333<br>Alumnos: 275<br>Docentes: 15<br>Siniestros: 0</div>`)[0];
+                popup_b518923ce1f771ae0d0f60a0811caab8.setContent(html_b56680ea4271f9f6fe7123178e331a09);
             
         
 
-        circle_marker_377be76d9c3cceea70072db4be1ec029.bindPopup(popup_de859fd6bd283de4dd0428697857564d)
+        circle_marker_5b93feb7a313f48fe49e2e39e597d1f4.bindPopup(popup_b518923ce1f771ae0d0f60a0811caab8)
         ;
 
         
     
     
-            var circle_marker_a4760a0b63d34a52abb9656179d1776b = L.circleMarker(
+            circle_marker_5b93feb7a313f48fe49e2e39e597d1f4.bindTooltip(
+                `<div>
+                     cientifica del vraem | 756531
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_9e83ca2ab1dfbdd6227300ec7c9f5967 = L.circleMarker(
                 [-11.43481, -74.4885],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_d98dff8b67b7355f56921baf17c37649);
+            ).addTo(feature_group_d56bd32fe635e2efa64ff11b870e5bd1);
         
     
-        var popup_6b7ab0a8f0e8bdfa5a8db51223d4a368 = L.popup({
-  "maxWidth": 400,
+        var popup_397fbbd92d0d227f4b71457a25114258 = L.popup({
+  "maxWidth": 420,
 });
 
         
             
-                var html_041306a4edb784f3415b93bb12a7bb95 = $(`<div id="html_041306a4edb784f3415b93bb12a7bb95" style="width: 100.0%; height: 100.0%;"><b>CESAR&#x27;S</b><br>Código CE: 864494<br>UBIGEO gestor: 120606<br>Alumnos: 377<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
-                popup_6b7ab0a8f0e8bdfa5a8db51223d4a368.setContent(html_041306a4edb784f3415b93bb12a7bb95);
+                var html_34a824d9072aceaa7d8890db6af3e41a = $(`<div id="html_34a824d9072aceaa7d8890db6af3e41a" style="width: 100.0%; height: 100.0%;"><b>CESAR&#x27;S</b><br>Código CE: 864494<br>UBIGEO gestor: 120606<br>Latitud: -11.43481<br>Longitud: -74.4885<br>Alumnos: 377<br>Docentes: 14<br>Siniestros: 0</div>`)[0];
+                popup_397fbbd92d0d227f4b71457a25114258.setContent(html_34a824d9072aceaa7d8890db6af3e41a);
             
         
 
-        circle_marker_a4760a0b63d34a52abb9656179d1776b.bindPopup(popup_6b7ab0a8f0e8bdfa5a8db51223d4a368)
+        circle_marker_9e83ca2ab1dfbdd6227300ec7c9f5967.bindPopup(popup_397fbbd92d0d227f4b71457a25114258)
         ;
 
         
     
     
-            feature_group_d98dff8b67b7355f56921baf17c37649.addTo(map_90eed9569047f77dacadf3ad86020da0);
+            circle_marker_9e83ca2ab1dfbdd6227300ec7c9f5967.bindTooltip(
+                `<div>
+                     cesar's | 864494
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
         
     
-            var feature_group_29775ffe8f1cc18da49ee062a0e7fd12 = L.featureGroup(
+            feature_group_d56bd32fe635e2efa64ff11b870e5bd1.addTo(map_47bb3e3524458ede51c973e7553ab9ee);
+        
+    
+            var feature_group_cb80ff88063bbaa2b79e72a764e62545 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_29775ffe8f1cc18da49ee062a0e7fd12.addTo(map_90eed9569047f77dacadf3ad86020da0);
+            feature_group_cb80ff88063bbaa2b79e72a764e62545.addTo(map_47bb3e3524458ede51c973e7553ab9ee);
         
     
-            map_90eed9569047f77dacadf3ad86020da0.fitBounds(
+            map_47bb3e3524458ede51c973e7553ab9ee.fitBounds(
                 [[-11.4333, -74.4853], [-11.4334, -74.4832], [-11.430946, -74.487804], [-11.580691, -74.407473], [-11.6467, -74.3715], [-11.6477, -74.3689], [-11.435996, -74.493294], [-11.4236, -74.48715], [-11.437829, -74.490172], [-11.43002, -74.48904], [-11.42922, -74.49333], [-11.43481, -74.4885]],
                 {}
             );
         
     
-            var layer_control_7ff1ea0dcd0385c8adf5f90564dd9a62_layers = {
+            var layer_control_4951bfe59c3d065b0e2f4c31be0b18f7_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_4f0b5ef5259719ed47e758fa32537358,
+                    "openstreetmap" : tile_layer_d03c65f4fd371a77ccb830cb3b4447d2,
                 },
                 overlays :  {
-                    "contorno" : feature_group_7e55b96bcc6a02a44992c21951472ec8,
-                    "colegios: buffers" : feature_group_a7c17c45d8cd67f1a267b7c966be5f16,
-                    "colegios: puntos" : feature_group_d98dff8b67b7355f56921baf17c37649,
-                    "siniestros fatales" : feature_group_29775ffe8f1cc18da49ee062a0e7fd12,
+                    "contorno" : feature_group_5d402a002e2ccae8c30518fd680b1110,
+                    "colegios: buffers" : feature_group_dfee26f989eeee6a62d0b35d4a5b5a99,
+                    "colegios: puntos" : feature_group_d56bd32fe635e2efa64ff11b870e5bd1,
+                    "siniestros fatales" : feature_group_cb80ff88063bbaa2b79e72a764e62545,
                 },
             };
-            let layer_control_7ff1ea0dcd0385c8adf5f90564dd9a62 = L.control.layers(
-                layer_control_7ff1ea0dcd0385c8adf5f90564dd9a62_layers.base_layers,
-                layer_control_7ff1ea0dcd0385c8adf5f90564dd9a62_layers.overlays,
+            let layer_control_4951bfe59c3d065b0e2f4c31be0b18f7 = L.control.layers(
+                layer_control_4951bfe59c3d065b0e2f4c31be0b18f7_layers.base_layers,
+                layer_control_4951bfe59c3d065b0e2f4c31be0b18f7_layers.overlays,
                 {
   "position": "topright",
   "collapsed": true,
   "autoZIndex": true,
 }
-            ).addTo(map_90eed9569047f77dacadf3ad86020da0);
+            ).addTo(map_47bb3e3524458ede51c973e7553ab9ee);
 
         
     
-        feature_group_d98dff8b67b7355f56921baf17c37649.bringToFront();
-        feature_group_29775ffe8f1cc18da49ee062a0e7fd12.bringToFront();
+        feature_group_d56bd32fe635e2efa64ff11b870e5bd1.bringToFront();
+        feature_group_cb80ff88063bbaa2b79e72a764e62545.bringToFront();
+    
+    
+      (function() {
+        var puntosLayer = feature_group_d56bd32fe635e2efa64ff11b870e5bd1;
+        var defaultTrue  = '#7dd3fc';
+        var defaultFalse = '#1d4ed8';
+        var hiliteColor  = '#f59e0b';
+
+        // ---------- Toggle colapsar/expandir ----------
+        var box = document.getElementById('zs_tools');
+        var btnToggle = document.getElementById('btn_toggle_box');
+        var saved = null;
+        try { saved = localStorage.getItem('zs_tools_collapsed'); } catch(e) {}
+        if (saved === '1') {
+          box.classList.add('collapsed');
+          btnToggle.textContent = '⯈ Mostrar';
+        }
+        function toggleBox() {
+          var collapsed = box.classList.toggle('collapsed');
+          btnToggle.textContent = collapsed ? '⯈ Mostrar' : '⯆ Ocultar';
+          try { localStorage.setItem('zs_tools_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+        btnToggle.addEventListener('click', toggleBox);
+
+        // ---------- Esperar a que el mapa esté disponible ----------
+        var ly_map = null;
+        function ensureMap(cb) {
+          var tries = 0;
+          (function wait() {
+            ly_map = (puntosLayer && puntosLayer._map) ? puntosLayer._map : null;
+            if (ly_map) { cb(); return; }
+            if (tries++ < 80) { setTimeout(wait, 50); }
+          })();
+        }
+
+        ensureMap(function initTools() {
+          // ---------- Utilidades de búsqueda ----------
+          function eachMarker(fn) {
+            if (!puntosLayer || !puntosLayer._layers) return;
+            Object.values(puntosLayer._layers).forEach(function(ly) {
+              if (ly && typeof ly.setStyle === 'function') fn(ly);
+            });
+          }
+
+          function getTooltipText(ly) {
+            try {
+              var t = ly.getTooltip();
+              return t ? String(t.getContent() || '').toLowerCase() : '';
+            } catch(e) { return ''; }
+          }
+
+          function clearHighlights() {
+            eachMarker(function(ly) {
+              var st = (ly.options || {});
+              if (!st._origColor) { st._origColor = st.color; }
+              var orig = (st.color === hiliteColor) ? st._origColor : st.color;
+              ly.setStyle({ color: orig || defaultFalse, fillColor: orig || defaultFalse });
+            });
+          }
+
+          function searchAndHighlight() {
+            var qn_raw = (document.getElementById('q_name').value || '');
+            var qc_raw = (document.getElementById('q_code').value || '');
+            var qn = qn_raw.toLowerCase();
+            var qc = qc_raw.toLowerCase();
+
+            var useName = qn_raw.trim().length > 0;
+            var useCode = qc_raw.trim().length > 0;
+
+            clearHighlights();
+            if (!useName && !useCode) return;
+
+            var matchedLatLngs = [];
+            eachMarker(function(ly) {
+              var txt = getTooltipText(ly);
+              var parts = txt.split('|', 2);
+              var nameTxt = (parts[0] || '').trim();
+              var codeTxt = (parts[1] || '').trim();
+
+              var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+              var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+              if (matchName || matchCode) {
+                if (!ly.options._origColor) { ly.options._origColor = ly.options.color; }
+                ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+                if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+              }
+            });
+
+            if (matchedLatLngs.length > 0) {
+              var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+              try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+            }
+          }
+
+          document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+          document.getElementById('btn_clear').addEventListener('click', function() {
+            document.getElementById('q_name').value = '';
+            document.getElementById('q_code').value = '';
+            clearHighlights();
+          });
+          ['q_name','q_code'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+          });
+
+          // ---------- Pin por coordenadas ----------
+          var coordLayer = L.layerGroup().addTo(ly_map);
+          function goToXY() {
+            var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+            var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+            if (!isFinite(x) || !isFinite(y)) return;
+            coordLayer.clearLayers();
+            var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+            mk.addTo(coordLayer);
+            ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+          }
+          function clearXY() { coordLayer.clearLayers(); }
+          document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+          document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+          // ---------- Medición ----------
+          var measuring = false;
+          var mA = null, mB = null, mLine = null;
+
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2-lat1) * Math.PI/180;
+            var dLon = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2)*Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          }
+
+          function updateMeasure() {
+            if (!(mA && mB)) return;
+            var a = mA.getLatLng(), b = mB.getLatLng();
+            var d = haversine(a.lat, a.lng, b.lat, b.lng);
+            var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+            if (!mLine) {
+              mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+                .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+                .addTo(ly_map);
+            } else {
+              mLine.setLatLngs([a, b]);
+              mLine.setTooltipContent(txt);
+            }
+          }
+
+          function clearMeasure() {
+            if (mA) ly_map.removeLayer(mA); mA = null;
+            if (mB) ly_map.removeLayer(mB); mB = null;
+            if (mLine) ly_map.removeLayer(mLine); mLine = null;
+          }
+
+          function toggleMeasure() {
+            measuring = !measuring;
+            var stateSpan = document.getElementById('measure_state');
+            stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+            stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+            if (!measuring) {
+              clearMeasure();
+              ly_map.getContainer().style.cursor = '';
+              return;
+            }
+            ly_map.getContainer().style.cursor = 'crosshair';
+          }
+          document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+          ly_map.on('click', function(ev) {
+            if (!measuring) return;
+            if (!mA) {
+              mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+              mA.on('drag', updateMeasure);
+            } else if (!mB) {
+              mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+              mB.on('drag', updateMeasure);
+            } else {
+              mB.setLatLng(ev.latlng);
+            }
+            updateMeasure();
+          });
+
+          // ---------- Abrir vista actual en Google Maps ----------
+          function openInGoogleMaps() {
+            var c = ly_map.getCenter();
+            var z = ly_map.getZoom();
+            var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+            window.open(url, '_blank');
+          }
+          document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+        });
+      })();
     
 </script>
 </html>
