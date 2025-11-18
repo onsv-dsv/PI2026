@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-maps_establecimientos.py  (Establecimientos de Salud + siniestros + contorno + buscador)
+maps_establecimientos.py  (Establecimientos de Salud + siniestros + contorno + buscador + coords + medir + GMaps)
 - Normaliza encabezados a minúscula al leer cada Excel.
 - Buffer de 100 m para establecimientos (no interactivo).
 - Título del mapa = nombre del archivo .xlsx (sin extensión).
 - Buscador por nombre_establecimiento y codigo_unico (case-insensitive, contains, OR).
+- Buscador de coordenadas (X=longitud, Y=latitud).
+- Herramienta de medición (dos puntos arrastrables; distancia en metros, etiqueta sobre la línea).
+- Botón para abrir vista actual en Google Maps.
 """
 
 import argparse
@@ -13,11 +16,12 @@ import json
 import pandas as pd
 import folium
 from html import escape
-from branca.element import Template
+from branca.element import Template, MacroElement
 
-COLOR_EST    = "#1d4ed8"  # azul establecimientos
-COLOR_FATAL  = "#d90429"  # rojo siniestros
-COLOR_HILITE = "#f59e0b"  # amarillo resaltado
+COLOR_EST      = "#1d4ed8"   # azul establecimientos
+COLOR_FATAL    = "#d90429"   # rojo siniestros
+COLOR_HILITE   = "#f59e0b"   # amarillo resaltado
+COLOR_CONTORNO = "#9ca3af"   # plomo (Tailwind gray-400 aprox)
 
 # ---------------- util ----------------
 def to_ubigeo6(x):
@@ -50,11 +54,11 @@ def add_title(m: folium.Map, text: str):
 
 def add_legend(m: folium.Map):
     html = f"""
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:{COLOR_EST}; border-radius:50%;"></span>
@@ -252,24 +256,39 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     lon0 = float(df["longitud"].mean())
     m = folium.Map(location=[lat0, lon0], tiles="OpenStreetMap", zoom_start=14, control_scale=True)
 
-    # CSS (incluye barra de búsqueda)
-    m.get_root().html.add_child(folium.Element("""
+    # CSS (UI derecha + estilos etiqueta distancia)
+    m.get_root().html.add_child(folium.Element(f"""
     <style>
-      .leaflet-interactive.zs-buffer { pointer-events: none !important; }
-      .searchbar-wrap{
-        position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+      .leaflet-interactive.zs-buffer {{ pointer-events: none !important; }}
+      .searchbar-wrap {{
+        position: fixed; right: 20px; bottom: 140px;  /* encima de la leyenda */
         z-index: 10000; background: rgba(255,255,255,0.95);
-        padding: 8px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; display:flex; gap:8px; align-items:center;
-      }
-      .searchbar-wrap input{
-        border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; min-width:220px;
-        font-size:13px;
-      }
-      .searchbar-wrap button{
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display:flex; flex-direction: column; gap:8px; min-width: 300px;
+      }}
+      .row-flex {{ display:flex; gap:8px; align-items:center; }}
+      .col-flex {{ display:flex; flex-direction:column; gap:8px; }}
+      .row-flex input, .col-flex input {{
+        border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1;
+      }}
+      .row-flex button, .col-flex button {{
         border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer;
-        background:#111827; color:#fff;
-      }
+      }}
+      .btn-dark  {{ background:#111827; color:#fff; }}
+      .btn-gray  {{ background:#6b7280; color:#fff; }}
+      .btn-green {{ background:#065f46; color:#fff; }}
+      .btn-red   {{ background:#991b1b; color:#fff; }}
+      .pill {{ font-size:12px; padding:4px 8px; border-radius:999px; }}
+      .hint {{ font-size:12px; color:#374151; }}
+      .dist-on-line {{
+        background: rgba(17,24,39,0.85);
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(255,255,255,0.2);
+      }}
     </style>
     """))
 
@@ -286,6 +305,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     m.add_child(fg_puntos)
     m.add_child(fg_siniestros)
 
+    # Contorno (plomo y 0.7 de transparencia => fillOpacity=0.3)
     target_ubi = to_ubigeo6(df["ubigeo_gestor"].dropna().iloc[0]) if "ubigeo_gestor" in df.columns and df["ubigeo_gestor"].notna().any() else None
     feats = []
     if target_ubi:
@@ -303,8 +323,8 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                     "weight": 2.5,
                     "opacity": 1.0,
                     "fill": True,
-                    "fillColor": "#FFA500",
-                    "fillOpacity": 0.6
+                    "fillColor": COLOR_CONTORNO,
+                    "fillOpacity": 0.3
                 }
             ).add_to(fg_contorno)
 
@@ -357,27 +377,52 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                     popup=folium.Popup(build_popup_siniestro(r), max_width=500),
                 ).add_to(fg_siniestros)
 
+    # --- Traer al frente capas ---
     tpl_front = Template(f"""
     {{% macro script(this, kwargs) %}}
         {fg_puntos.get_name()}.bringToFront();
         {fg_siniestros.get_name()}.bringToFront();
     {{% endmacro %}}
     """)
-    m.get_root().add_child(tpl_front)
+    me_front = MacroElement()
+    me_front._template = tpl_front
+    m.get_root().add_child(me_front)
 
     if len(bounds) >= 2:
         m.fit_bounds(bounds)
 
     folium.LayerControl(collapsed=True).add_to(m)
 
-    # ---------- Buscadores (JS puro, case-insensitive, OR) ----------
+    # ---------- UI derecha: buscadores + coords + medir + Google Maps ----------
     search_ui = Template(f"""
     {{% macro html(this, kwargs) %}}
       <div class="searchbar-wrap">
-        <input id="q_name" type="text" placeholder="Buscar por nombre_establecimiento…">
-        <input id="q_code" type="text" placeholder="Buscar por codigo_unico…">
-        <button id="btn_search">Buscar</button>
-        <button id="btn_clear" style="background:#6b7280;">Limpiar</button>
+        <!-- Buscador por nombre (arriba) y código (abajo) -->
+        <div class="col-flex">
+          <input id="q_name" type="text" placeholder="Buscar por nombre">
+          <input id="q_code" type="text" placeholder="Buscar por código">
+        </div>
+        <div class="row-flex">
+          <button id="btn_search" class="btn-dark">Buscar</button>
+          <button id="btn_clear" class="btn-gray">Limpiar</button>
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+        <!-- Coordenadas: Longitud (arriba) y Latitud (abajo) -->
+        <div class="col-flex" title="Coordenadas en grados decimales">
+          <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+          <div class="row-flex">
+            <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+            <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+            <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+          </div>
+        </div>
+        <div class="row-flex">
+          <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+          <span id="measure_state" class="hint" style="color:#991b1b">Desactivado</span>
+        </div>
+        <div class="row-flex">
+          <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+        </div>
       </div>
     {{% endmacro %}}
 
@@ -387,6 +432,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
         var defaultColor = "{COLOR_EST}";
         var hiliteColor  = "{COLOR_HILITE}";
 
+        // --- helpers ---
         function eachMarker(fn) {{
           if (!puntosLayer || !puntosLayer._layers) return;
           Object.values(puntosLayer._layers).forEach(function(ly) {{
@@ -407,19 +453,30 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
           eachMarker(function(ly) {{ ly.setStyle({{ color: defaultColor, fillColor: defaultColor }}); }});
         }}
 
+        // --- búsqueda por campos ---
         function searchAndHighlight() {{
-          var qn = (document.getElementById('q_name').value || "").toLowerCase().trim();
-          var qc = (document.getElementById('q_code').value || "").toLowerCase().trim();
+          var qn_raw = (document.getElementById('q_name').value || "");
+          var qc_raw = (document.getElementById('q_code').value || "");
+          var qn = qn_raw.toLowerCase();
+          var qc = qc_raw.toLowerCase();
+
+          var useName = qn_raw.trim().length > 0;
+          var useCode = qc_raw.trim().length > 0;
 
           clearHighlights();
+          if (!useName && !useCode) return;
 
           var matchedLatLngs = [];
-
           eachMarker(function(ly) {{
-            var txt = getTooltipText(ly);
-            var ok_name = !qn || (txt.indexOf(qn) !== -1);
-            var ok_code = !qc || (txt.indexOf(qc) !== -1);
-            if (ok_name || ok_code) {{
+            var txt = getTooltipText(ly); // "nombre | codigo"
+            var parts = txt.split('|', 2);
+            var nameTxt = (parts[0] || '').trim();
+            var codeTxt = (parts[1] || '').trim();
+
+            var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+            var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+            if (matchName || matchCode) {{
               ly.setStyle({{ color: hiliteColor, fillColor: hiliteColor }});
               if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
             }}
@@ -433,9 +490,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
 
         var ly_map = (function() {{
           var _m = null;
-          try {{
-            _m = puntosLayer._map || null;
-          }} catch(e) {{}}
+          try {{ _m = puntosLayer._map || null; }} catch(e) {{}}
           return _m;
         }})();
 
@@ -445,17 +500,115 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
           document.getElementById('q_code').value = "";
           clearHighlights();
         }});
-
         ['q_name','q_code'].forEach(function(id) {{
           var el = document.getElementById(id);
-          el.addEventListener('keydown', function(ev) {{
-            if (ev.key === 'Enter') searchAndHighlight();
-          }});
+          el.addEventListener('keydown', function(ev) {{ if (ev.key === 'Enter') searchAndHighlight(); }});
         }});
+
+        // --- pin por coordenadas ---
+        var coordLayer = L.layerGroup().addTo(ly_map);
+        function goToXY() {{
+          var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+          var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+          if (!isFinite(x) || !isFinite(y)) return;
+          coordLayer.clearLayers();
+          var mk = L.marker([y, x], {{ draggable:false, title: 'Punto (Y,X): '+y+', '+x }});
+          mk.addTo(coordLayer);
+          ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+        }}
+        function clearXY() {{ coordLayer.clearLayers(); }}
+
+        document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+        document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+        // --- medición (dos puntos arrastrables + etiqueta sobre línea) ---
+        var measuring = false;
+        var mA = null, mB = null, mLine = null;
+
+        function haversine(lat1, lon1, lat2, lon2) {{
+          var R = 6371000; // m
+          var dLat = (lat2-lat1) * Math.PI/180;
+          var dLon = (lon2-lon1) * Math.PI/180;
+          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                  Math.sin(dLon/2)*Math.sin(dLon/2);
+          var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return R * c;
+        }}
+
+        function midPoint(a, b) {{
+          return L.latLng( (a.lat + b.lat)/2, (a.lng + b.lng)/2 );
+        }}
+
+        function updateMeasure() {{
+          if (!(mA && mB)) return;
+          var a = mA.getLatLng(), b = mB.getLatLng();
+          var d = haversine(a.lat, a.lng, b.lat, b.lng);
+          var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+          if (!mLine) {{
+            mLine = L.polyline([a, b], {{ color: '#111827', weight: 3, dashArray: '6,4' }})
+              .bindTooltip(txt, {{ permanent:true, direction:'center', className:'dist-on-line' }})
+              .addTo(ly_map);
+          }} else {{
+            mLine.setLatLngs([a, b]);
+            mLine.setTooltipContent(txt);
+          }}
+        }}
+
+        function clearMeasure() {{
+          if (mA) ly_map.removeLayer(mA); mA = null;
+          if (mB) ly_map.removeLayer(mB); mB = null;
+          if (mLine) ly_map.removeLayer(mLine); mLine = null;
+        }}
+
+        function toggleMeasure() {{
+          measuring = !measuring;
+          var stateSpan = document.getElementById('measure_state');
+          stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+          stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+          if (!measuring) {{
+            clearMeasure();
+            ly_map.getContainer().style.cursor = '';
+            return;
+          }}
+          ly_map.getContainer().style.cursor = 'crosshair';
+        }}
+
+        document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+        ly_map.on('click', function(ev) {{
+          if (!measuring) return;
+          if (!mA) {{
+            mA = L.marker(ev.latlng, {{ draggable:true, title:'Punto A' }}).addTo(ly_map);
+            mA.on('drag', updateMeasure);
+          }} else if (!mB) {{
+            mB = L.marker(ev.latlng, {{ draggable:true, title:'Punto B' }}).addTo(ly_map);
+            mB.on('drag', updateMeasure);
+          }} else {{
+            // Si ya existen A y B, mover B al nuevo click
+            mB.setLatLng(ev.latlng);
+          }}
+          updateMeasure();
+        }});
+
+        // --- Abrir en Google Maps la vista actual ---
+        function openInGoogleMaps() {{
+          if (!ly_map) return;
+          var c = ly_map.getCenter();
+          var z = ly_map.getZoom();
+          // URL estilo @lat,lon,zoomz
+          var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+          window.open(url, '_blank');
+        }}
+        document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+
       }})();
     {{% endmacro %}}
     """)
-    m.get_root().add_child(search_ui)
+    me_search = MacroElement()
+    me_search._template = search_ui
+    m.get_root().add_child(me_search)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     html_name = xlsx_path.with_suffix(".html").name

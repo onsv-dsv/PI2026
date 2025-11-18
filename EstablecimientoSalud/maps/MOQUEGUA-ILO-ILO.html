@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_e84feac083c47c24ca3b04c9e6077f9b {
+                #map_6d448bef4c214209dbf473b3d4e4b0f5 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,18 +56,35 @@
     
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
-      .zs-search {
-        position: fixed; top: 62px; left: 14px; z-index: 9999;
-        background: rgba(255,255,255,0.95); padding: 10px; border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.12); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-        width: 280px;
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;  /* encima de la leyenda */
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display:flex; flex-direction: column; gap:8px; min-width: 300px;
       }
-      .zs-search h4 { margin: 0 0 8px; font-size: 14px; }
-      .zs-search label { display:block; font-size:12px; color:#374151; margin:6px 0 2px; }
-      .zs-search input {
-        width: 100%; padding: 8px 10px; border-radius: 8px; border:1px solid #e5e7eb; outline:none;
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input {
+        border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1;
       }
-      .zs-search .muted { font-size: 11px; color:#6b7280; margin-top:6px; }
+      .row-flex button, .col-flex button {
+        border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer;
+      }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .hint { font-size:12px; color:#374151; }
+      .dist-on-line {
+        background: rgba(17,24,39,0.85);
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
     </style>
     
     
@@ -81,11 +98,11 @@
     </div>
     
     
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:#1d4ed8; border-radius:50%;"></span>
@@ -95,17 +112,51 @@
             <span style="display:inline-block; width:14px; height:14px; background:#d90429; border-radius:50%;"></span>
             <span>Rojo: Siniestro fatal</span>
         </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+            <span style="display:inline-block; width:14px; height:14px; background:#f59e0b; border-radius:50%;"></span>
+            <span>Amarillo: Coincidencia de búsqueda</span>
+        </div>
     </div>
     
     
-            <div class="folium-map" id="map_e84feac083c47c24ca3b04c9e6077f9b" ></div>
+            <div class="folium-map" id="map_6d448bef4c214209dbf473b3d4e4b0f5" ></div>
         
+    
+      <div class="searchbar-wrap">
+        <!-- Buscador por nombre (arriba) y código (abajo) -->
+        <div class="col-flex">
+          <input id="q_name" type="text" placeholder="Buscar por nombre">
+          <input id="q_code" type="text" placeholder="Buscar por código">
+        </div>
+        <div class="row-flex">
+          <button id="btn_search" class="btn-dark">Buscar</button>
+          <button id="btn_clear" class="btn-gray">Limpiar</button>
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+        <!-- Coordenadas: Longitud (arriba) y Latitud (abajo) -->
+        <div class="col-flex" title="Coordenadas en grados decimales">
+          <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+          <div class="row-flex">
+            <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+            <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+            <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+          </div>
+        </div>
+        <div class="row-flex">
+          <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+          <span id="measure_state" class="hint" style="color:#991b1b">Desactivado</span>
+        </div>
+        <div class="row-flex">
+          <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+        </div>
+      </div>
+    
 </body>
 <script>
     
     
-            var map_e84feac083c47c24ca3b04c9e6077f9b = L.map(
-                "map_e84feac083c47c24ca3b04c9e6077f9b",
+            var map_6d448bef4c214209dbf473b3d4e4b0f5 = L.map(
+                "map_6d448bef4c214209dbf473b3d4e4b0f5",
                 {
                     center: [-17.64783064272727, -71.33777196],
                     crs: L.CRS.EPSG3857,
@@ -117,13 +168,13 @@
 
                 }
             );
-            L.control.scale().addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            L.control.scale().addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
 
             
 
         
     
-            var tile_layer_792479faee3007dfa2641173134629b6 = L.tileLayer(
+            var tile_layer_5d974acfe3e844f59376338be96f3bf4 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -140,463 +191,695 @@
             );
         
     
-            tile_layer_792479faee3007dfa2641173134629b6.addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            tile_layer_5d974acfe3e844f59376338be96f3bf4.addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
         
     
-            var feature_group_672a9643788aace4f16a25de06eccee5 = L.featureGroup(
+            var feature_group_0f76818c6fd4c3d66664c7d202f98db6 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_672a9643788aace4f16a25de06eccee5.addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            feature_group_0f76818c6fd4c3d66664c7d202f98db6.addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
         
     
-            var feature_group_dfee8a9998122532515493228b4107d2 = L.featureGroup(
+            var feature_group_142bb36e750775bfa1e5f0c960c6b20b = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_9b20828eabd7aaf9befbdef5ee26a81b = L.circle(
+            var circle_62765a9869c2b4a81435ce8050ccfbc9 = L.circle(
                 [-17.65185454, -71.34179435],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_ecddd1589ec95e5278b91f01bf8f3854 = L.circle(
+            var circle_0bfe9f7c332b7a57985b3b2fa7e97487 = L.circle(
                 [-17.65268394, -71.33634812],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_793544424d01458cea8926b11e270496 = L.circle(
+            var circle_076ff7560dba9d5e06c36f4110b3ab1a = L.circle(
                 [-17.65242835, -71.33664585],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_d55a1b91b31dd7a7593c06b6815ddcbf = L.circle(
+            var circle_f3d1cdb3789b4eb6182cb6b266144f1b = L.circle(
                 [-17.64437606, -71.34377752],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_b21e14991b63b840b2ecf136bac5427c = L.circle(
+            var circle_1791d4bb173a627bbacd33805068abbc = L.circle(
                 [-17.66006398, -71.3324777],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_001d2d3a92329d2051d4191d6676fd31 = L.circle(
+            var circle_0892b36ddd07587e167f7805172fe204 = L.circle(
                 [-17.634884, -71.334828],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_48a5360a9768b087065e57c2574eb942 = L.circle(
+            var circle_81fb86651a308d9076c8fcbcea0f0403 = L.circle(
                 [-17.65055996, -71.33266009],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_da2a5085d36f291ed039d882f612c230 = L.circle(
+            var circle_c48467a835c6c3b68586c7638d1e26c9 = L.circle(
                 [-17.641547, -71.339129],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_b01dba133acf2ca48199d815bd1b6ec0 = L.circle(
+            var circle_f61793a74585079258ddfdcdc2f4a115 = L.circle(
                 [-17.64434949, -71.34503948],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_71e5d877e3157641a28a31f684ffd353 = L.circle(
+            var circle_7e4088541cc464394b5565ad29fd5fd1 = L.circle(
                 [-17.643273, -71.341157],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            var circle_bb483333ec7422fd82fed1f8a4c39c4b = L.circle(
+            var circle_c9ddac0c4f5676019ef2b50e9abc97cb = L.circle(
                 [-17.65011675, -71.33163445],
                 {"bubblingMouseEvents": true, "className": "zs-buffer", "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 0.5, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 100, "stroke": true, "weight": 2}
-            ).addTo(feature_group_dfee8a9998122532515493228b4107d2);
+            ).addTo(feature_group_142bb36e750775bfa1e5f0c960c6b20b);
         
     
-            feature_group_dfee8a9998122532515493228b4107d2.addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            feature_group_142bb36e750775bfa1e5f0c960c6b20b.addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
         
     
-            var feature_group_92b3018e4a5886ab2305c0cc86d8029f = L.featureGroup(
+            var feature_group_4e9f7921fc39787f8d15ce6153f65dea = L.featureGroup(
                 {
 }
             );
         
     
-            var circle_marker_43c2630c1fd6fa43f8f211abd312c2dd = L.circleMarker(
+            var circle_marker_da98e3a4b09c9a37b0c393667da2fd20 = L.circleMarker(
                 [-17.65185454, -71.34179435],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_40af0245c79df2ce3ac5f554624a02e1 = L.popup({
+        var popup_9dd262215a1a3d2318b3bad1a25770ed = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_20349801425152969581df102e1ab051 = $(`<div id="html_20349801425152969581df102e1ab051" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>2819</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65185454</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34179435</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. ALTO ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>OTROS CHALACA S/N ALTO ILO NUMERO S/N DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_40af0245c79df2ce3ac5f554624a02e1.setContent(html_20349801425152969581df102e1ab051);
+                var html_2f3434164f516cd66b5cf2564ef10f56 = $(`<div id="html_2f3434164f516cd66b5cf2564ef10f56" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>2819</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65185454</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34179435</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. ALTO ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>OTROS CHALACA S/N ALTO ILO NUMERO S/N DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_9dd262215a1a3d2318b3bad1a25770ed.setContent(html_2f3434164f516cd66b5cf2564ef10f56);
             
         
 
-        circle_marker_43c2630c1fd6fa43f8f211abd312c2dd.bindPopup(popup_40af0245c79df2ce3ac5f554624a02e1)
+        circle_marker_da98e3a4b09c9a37b0c393667da2fd20.bindPopup(popup_9dd262215a1a3d2318b3bad1a25770ed)
         ;
 
         
     
     
-            var circle_marker_833eea01a5158a1ee0167b033db85c6d = L.circleMarker(
+            circle_marker_da98e3a4b09c9a37b0c393667da2fd20.bindTooltip(
+                `<div>
+                     c.s. alto ilo | 2819
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_0d4ac41bbdd05f3440be26dedead2999 = L.circleMarker(
                 [-17.65268394, -71.33634812],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_6fefff9f68a7e82e0657185a1537a51e = L.popup({
+        var popup_041df9abe08c1fca4cbd7c030b81f4a8 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_6cc2f2f72378fc3fd8cde98f0bdc5022 = $(`<div id="html_6cc2f2f72378fc3fd8cde98f0bdc5022" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>23034</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65268394</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33634812</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>Centro Salud Mental Comunitario Ilo</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA 1 NUMERO 1 MANZANA C LOTE 01 URBANIZACION URB. Luis E. Valcarcel DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_6fefff9f68a7e82e0657185a1537a51e.setContent(html_6cc2f2f72378fc3fd8cde98f0bdc5022);
+                var html_861b02812d352a37611681f406e1422f = $(`<div id="html_861b02812d352a37611681f406e1422f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>23034</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65268394</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33634812</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>Centro Salud Mental Comunitario Ilo</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA 1 NUMERO 1 MANZANA C LOTE 01 URBANIZACION URB. Luis E. Valcarcel DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_041df9abe08c1fca4cbd7c030b81f4a8.setContent(html_861b02812d352a37611681f406e1422f);
             
         
 
-        circle_marker_833eea01a5158a1ee0167b033db85c6d.bindPopup(popup_6fefff9f68a7e82e0657185a1537a51e)
+        circle_marker_0d4ac41bbdd05f3440be26dedead2999.bindPopup(popup_041df9abe08c1fca4cbd7c030b81f4a8)
         ;
 
         
     
     
-            var circle_marker_006452f778c9840c396bffaf29d845ae = L.circleMarker(
+            circle_marker_0d4ac41bbdd05f3440be26dedead2999.bindTooltip(
+                `<div>
+                     centro salud mental comunitario ilo | 23034
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_6aaa1546c7ae81f9eb80371eef441cb2 = L.circleMarker(
                 [-17.65242835, -71.33664585],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_8ed11d66b58298d8ea16f5cb51d57292 = L.popup({
+        var popup_2297f02ec4cc3ab64ae858be3aacb8f8 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_c236a11607228c4d688bd9157b3f08a2 = $(`<div id="html_c236a11607228c4d688bd9157b3f08a2" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>34031</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65242835</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33664585</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. PAMPA INALAMBRICA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA 1 C 1 A ESPALDA DEL HOSPITAL ILO ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_8ed11d66b58298d8ea16f5cb51d57292.setContent(html_c236a11607228c4d688bd9157b3f08a2);
+                var html_3a60cd50cfd74a40d73f8eae9e915cc3 = $(`<div id="html_3a60cd50cfd74a40d73f8eae9e915cc3" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>34031</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65242835</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33664585</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. PAMPA INALAMBRICA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA 1 C 1 A ESPALDA DEL HOSPITAL ILO ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_2297f02ec4cc3ab64ae858be3aacb8f8.setContent(html_3a60cd50cfd74a40d73f8eae9e915cc3);
             
         
 
-        circle_marker_006452f778c9840c396bffaf29d845ae.bindPopup(popup_8ed11d66b58298d8ea16f5cb51d57292)
+        circle_marker_6aaa1546c7ae81f9eb80371eef441cb2.bindPopup(popup_2297f02ec4cc3ab64ae858be3aacb8f8)
         ;
 
         
     
     
-            var circle_marker_0e20ead792e18a9fe6c9affbd37bdc36 = L.circleMarker(
+            circle_marker_6aaa1546c7ae81f9eb80371eef441cb2.bindTooltip(
+                `<div>
+                     c.s. pampa inalambrica | 34031
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_7b7787e2d09ab9f0c42585cc17e06f70 = L.circleMarker(
                 [-17.64437606, -71.34377752],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_fbed3b4cdcf83b2c8a32c758f5ebec5e = L.popup({
+        var popup_ee64ddbbc0c7fd601644a988ea9e6a46 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_61c1e56dfd41b8a45f8e78b8dd80a5c7 = $(`<div id="html_61c1e56dfd41b8a45f8e78b8dd80a5c7" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>25870</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.64437606</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34377752</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POSTA MEDICA POLICIAL ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>ZEPITA NUMERO 612 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-2</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_fbed3b4cdcf83b2c8a32c758f5ebec5e.setContent(html_61c1e56dfd41b8a45f8e78b8dd80a5c7);
+                var html_8b2f45d8c1aa2a92ab94d5f9ce838d68 = $(`<div id="html_8b2f45d8c1aa2a92ab94d5f9ce838d68" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>25870</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.64437606</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34377752</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POSTA MEDICA POLICIAL ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>ZEPITA NUMERO 612 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-2</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_ee64ddbbc0c7fd601644a988ea9e6a46.setContent(html_8b2f45d8c1aa2a92ab94d5f9ce838d68);
             
         
 
-        circle_marker_0e20ead792e18a9fe6c9affbd37bdc36.bindPopup(popup_fbed3b4cdcf83b2c8a32c758f5ebec5e)
+        circle_marker_7b7787e2d09ab9f0c42585cc17e06f70.bindPopup(popup_ee64ddbbc0c7fd601644a988ea9e6a46)
         ;
 
         
     
     
-            var circle_marker_e9afc7665debaf8bf753b7826fde4e58 = L.circleMarker(
+            circle_marker_7b7787e2d09ab9f0c42585cc17e06f70.bindTooltip(
+                `<div>
+                     posta medica policial ilo | 25870
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_85626b794938ba97bf04210e32bd0111 = L.circleMarker(
                 [-17.66006398, -71.3324777],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_a659c3da953f054597891a576395a69c = L.popup({
+        var popup_b290b5c681f4e366e6ad18c80717cdd4 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_f7e17dc50906e196d5d085b9d572a207 = $(`<div id="html_f7e17dc50906e196d5d085b9d572a207" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>21767</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.66006398</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.3324777</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SAN GERONIMO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>OTROS URBANIZACION LOS OLIVARES MZ. 2 LOTE 14 Y 15 PAMPA INALAMBRICA DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_a659c3da953f054597891a576395a69c.setContent(html_f7e17dc50906e196d5d085b9d572a207);
+                var html_140caacadeb97e81c0bacbb32b103fea = $(`<div id="html_140caacadeb97e81c0bacbb32b103fea" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>21767</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.66006398</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.3324777</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SAN GERONIMO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>OTROS URBANIZACION LOS OLIVARES MZ. 2 LOTE 14 Y 15 PAMPA INALAMBRICA DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_b290b5c681f4e366e6ad18c80717cdd4.setContent(html_140caacadeb97e81c0bacbb32b103fea);
             
         
 
-        circle_marker_e9afc7665debaf8bf753b7826fde4e58.bindPopup(popup_a659c3da953f054597891a576395a69c)
+        circle_marker_85626b794938ba97bf04210e32bd0111.bindPopup(popup_b290b5c681f4e366e6ad18c80717cdd4)
         ;
 
         
     
     
-            var circle_marker_98b62ba10d4b4be3635b9b3211479c2e = L.circleMarker(
+            circle_marker_85626b794938ba97bf04210e32bd0111.bindTooltip(
+                `<div>
+                     policlinico san geronimo | 21767
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_cc31e6f11f26472be5a2d6c160ab17e9 = L.circleMarker(
                 [-17.634884, -71.334828],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_af30c8078451d1f2d366243dd8fe0536 = L.popup({
+        var popup_543441c0e9f46adede18b393826e8ce7 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_189f86b4da87c42be5ac302611b428d7 = $(`<div id="html_189f86b4da87c42be5ac302611b428d7" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>2817</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.634884</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.334828</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. MIRAMAR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA AVENIDA PACIFICO S/N UPIS MIRAMAR S/N AVENIDA PACIFICO S/N UPIS MIRAMAR ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_af30c8078451d1f2d366243dd8fe0536.setContent(html_189f86b4da87c42be5ac302611b428d7);
+                var html_e451981b6504105048d8b79afdd51a36 = $(`<div id="html_e451981b6504105048d8b79afdd51a36" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>2817</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.634884</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.334828</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>C.S. MIRAMAR</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>AVENIDA AVENIDA PACIFICO S/N UPIS MIRAMAR S/N AVENIDA PACIFICO S/N UPIS MIRAMAR ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_543441c0e9f46adede18b393826e8ce7.setContent(html_e451981b6504105048d8b79afdd51a36);
             
         
 
-        circle_marker_98b62ba10d4b4be3635b9b3211479c2e.bindPopup(popup_af30c8078451d1f2d366243dd8fe0536)
+        circle_marker_cc31e6f11f26472be5a2d6c160ab17e9.bindPopup(popup_543441c0e9f46adede18b393826e8ce7)
         ;
 
         
     
     
-            var circle_marker_b7a484dadf568263d88a0ef31bed9663 = L.circleMarker(
+            circle_marker_cc31e6f11f26472be5a2d6c160ab17e9.bindTooltip(
+                `<div>
+                     c.s. miramar | 2817
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_0c44142a268dd672469b5e437ae54c0c = L.circleMarker(
                 [-17.65055996, -71.33266009],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_e78b2560df0b6391f6a9a8340807f612 = L.popup({
+        var popup_e6e580dac32f0d63124907df7aa2d87e = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_7198491bd91c083a558a46ddfc09cd6b = $(`<div id="html_7198491bd91c083a558a46ddfc09cd6b" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>30305</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65055996</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33266009</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO MANCHEGO SAC</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION LUIS E VALCARCEL 61 1 A DOS CUADRAS DE LA MUNICIPALIDAD DEL CENTRO POBLADO PAMPA INALAMBRICA ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_e78b2560df0b6391f6a9a8340807f612.setContent(html_7198491bd91c083a558a46ddfc09cd6b);
+                var html_7390d1af87ee571786e5ce29b9c2b7b9 = $(`<div id="html_7390d1af87ee571786e5ce29b9c2b7b9" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>30305</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65055996</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33266009</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO MANCHEGO SAC</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION LUIS E VALCARCEL 61 1 A DOS CUADRAS DE LA MUNICIPALIDAD DEL CENTRO POBLADO PAMPA INALAMBRICA ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_e6e580dac32f0d63124907df7aa2d87e.setContent(html_7390d1af87ee571786e5ce29b9c2b7b9);
             
         
 
-        circle_marker_b7a484dadf568263d88a0ef31bed9663.bindPopup(popup_e78b2560df0b6391f6a9a8340807f612)
+        circle_marker_0c44142a268dd672469b5e437ae54c0c.bindPopup(popup_e6e580dac32f0d63124907df7aa2d87e)
         ;
 
         
     
     
-            var circle_marker_04f8b52d4e8f0d2fcc518df0ace75245 = L.circleMarker(
+            circle_marker_0c44142a268dd672469b5e437ae54c0c.bindTooltip(
+                `<div>
+                     policlinico manchego sac | 30305
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_56affbd139ca73743172b033844636b1 = L.circleMarker(
                 [-17.641547, -71.339129],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_58834fff73151ba92b569237d50f2310 = L.popup({
+        var popup_e141d80c9de9ddcaf2210333a2d3760a = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_d1ab3841480526208a16fb4a66c7961f = $(`<div id="html_d1ab3841480526208a16fb4a66c7961f" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>27850</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.641547</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.339129</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>CLINICA SAGRADO CORAZON</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION URBANIZACION ADUANEROS L 02 Altura del ex-cine Ilo en la Av. Lino Urquieta, subiendo por el CEO Cesar Vallejo ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_58834fff73151ba92b569237d50f2310.setContent(html_d1ab3841480526208a16fb4a66c7961f);
+                var html_a8b0d1349e9c5ef482dd746bbb5d2f1e = $(`<div id="html_a8b0d1349e9c5ef482dd746bbb5d2f1e" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>27850</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.641547</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.339129</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>CLINICA SAGRADO CORAZON</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION URBANIZACION ADUANEROS L 02 Altura del ex-cine Ilo en la Av. Lino Urquieta, subiendo por el CEO Cesar Vallejo ILO ILO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_e141d80c9de9ddcaf2210333a2d3760a.setContent(html_a8b0d1349e9c5ef482dd746bbb5d2f1e);
             
         
 
-        circle_marker_04f8b52d4e8f0d2fcc518df0ace75245.bindPopup(popup_58834fff73151ba92b569237d50f2310)
+        circle_marker_56affbd139ca73743172b033844636b1.bindPopup(popup_e141d80c9de9ddcaf2210333a2d3760a)
         ;
 
         
     
     
-            var circle_marker_6ffe51e3ed67a4b85f4348e8c42f3437 = L.circleMarker(
+            circle_marker_56affbd139ca73743172b033844636b1.bindTooltip(
+                `<div>
+                     clinica sagrado corazon | 27850
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_48929c6d2ed5d042a02e0693aeceea16 = L.circleMarker(
                 [-17.64434949, -71.34503948],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_b71af217b4298364b05509807ab618ff = L.popup({
+        var popup_f14158294ca9296509d52b83bff46946 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_ee87cbee2ec85c28b366ef50a8e23873 = $(`<div id="html_ee87cbee2ec85c28b366ef50a8e23873" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>18616</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.64434949</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34503948</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SERVIMEDIQ</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>JR. ABTAO Nº 437 - 443 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_b71af217b4298364b05509807ab618ff.setContent(html_ee87cbee2ec85c28b366ef50a8e23873);
+                var html_abd2de30c9f695eb93295504d249f133 = $(`<div id="html_abd2de30c9f695eb93295504d249f133" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>18616</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.64434949</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.34503948</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SERVIMEDIQ</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>JR. ABTAO Nº 437 - 443 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_f14158294ca9296509d52b83bff46946.setContent(html_abd2de30c9f695eb93295504d249f133);
             
         
 
-        circle_marker_6ffe51e3ed67a4b85f4348e8c42f3437.bindPopup(popup_b71af217b4298364b05509807ab618ff)
+        circle_marker_48929c6d2ed5d042a02e0693aeceea16.bindPopup(popup_f14158294ca9296509d52b83bff46946)
         ;
 
         
     
     
-            var circle_marker_aad51c36f01dddc713f5e3385ae40e25 = L.circleMarker(
+            circle_marker_48929c6d2ed5d042a02e0693aeceea16.bindTooltip(
+                `<div>
+                     policlinico servimediq | 18616
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_6e2d71c3f37453c511db45c84eebe35f = L.circleMarker(
                 [-17.643273, -71.341157],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_2787d620d01cefd7c3dd1af5f9446470 = L.popup({
+        var popup_e559ddff9d488c552cc9b0b2f887d222 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_0979230f4d69784725bcbcd6e8e21118 = $(`<div id="html_0979230f4d69784725bcbcd6e8e21118" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>30209</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.643273</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.341157</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>Centro Medico Especializado MMD 4M EIRL</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>CALLE Moquegua NUMERO 886 PISO 2 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
-                popup_2787d620d01cefd7c3dd1af5f9446470.setContent(html_0979230f4d69784725bcbcd6e8e21118);
+                var html_a3f404299af4caa93116a69744aa9b69 = $(`<div id="html_a3f404299af4caa93116a69744aa9b69" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>30209</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.643273</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.341157</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>Centro Medico Especializado MMD 4M EIRL</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>CALLE Moquegua NUMERO 886 PISO 2 DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>0</td></tr></table></div></div>`)[0];
+                popup_e559ddff9d488c552cc9b0b2f887d222.setContent(html_a3f404299af4caa93116a69744aa9b69);
             
         
 
-        circle_marker_aad51c36f01dddc713f5e3385ae40e25.bindPopup(popup_2787d620d01cefd7c3dd1af5f9446470)
+        circle_marker_6e2d71c3f37453c511db45c84eebe35f.bindPopup(popup_e559ddff9d488c552cc9b0b2f887d222)
         ;
 
         
     
     
-            var circle_marker_e43d0b7c5c44ab6a8dffea1c106573f2 = L.circleMarker(
+            circle_marker_6e2d71c3f37453c511db45c84eebe35f.bindTooltip(
+                `<div>
+                     centro medico especializado mmd 4m eirl | 30209
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
+        
+    
+            var circle_marker_f0c90b869fa694cc0956edd66a994328 = L.circleMarker(
                 [-17.65011675, -71.33163445],
                 {"bubblingMouseEvents": true, "color": "#1d4ed8", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#1d4ed8", "fillOpacity": 1.0, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5, "stroke": true, "weight": 2}
-            ).addTo(feature_group_92b3018e4a5886ab2305c0cc86d8029f);
+            ).addTo(feature_group_4e9f7921fc39787f8d15ce6153f65dea);
         
     
-        var popup_33d518665fd92206bdf1e58c8b392255 = L.popup({
+        var popup_690f745a33646fbc7defa88086d256f8 = L.popup({
   "maxWidth": 480,
 });
 
         
             
-                var html_a7aee514b9a8677cb36680d42a0d4413 = $(`<div id="html_a7aee514b9a8677cb36680d42a0d4413" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>29951</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65011675</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33163445</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SERSIMED SEDE ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION LUIS ERNESTO VALCARCEL NUMERO 53 PISO 1 MANZANA 53 LOTE 02 URBANIZACION LUIS ERNESTO VALCARCEL DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
-                popup_33d518665fd92206bdf1e58c8b392255.setContent(html_a7aee514b9a8677cb36680d42a0d4413);
+                var html_e3e56a34717b87a932c8adc4ef5296c8 = $(`<div id="html_e3e56a34717b87a932c8adc4ef5296c8" style="width: 100.0%; height: 100.0%;"><div style='font-size:12px;'><div style='font-weight:700; margin-bottom:6px;'>Establecimiento de salud priorizado</div><table style='border-collapse:collapse;'><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>codigo_unico</th><td style='padding:2px 0;'>29951</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>latitud</th><td style='padding:2px 0;'>-17.65011675</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>longitud</th><td style='padding:2px 0;'>-71.33163445</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>nombre_establecimiento</th><td style='padding:2px 0;'>POLICLINICO SERSIMED SEDE ILO</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>direccion</th><td style='padding:2px 0;'>URBANIZACION LUIS ERNESTO VALCARCEL NUMERO 53 PISO 1 MANZANA 53 LOTE 02 URBANIZACION LUIS ERNESTO VALCARCEL DISTRITO ILO PROVINCIA ILO DEPARTAMENTO MOQUEGUA</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>categoria</th><td style='padding:2px 0;'>I-3</td></tr><tr><th style='text-align:left; padding:2px 8px 2px 0; white-space:nowrap;'>siniestros_fatales</th><td style='padding:2px 0;'>1</td></tr></table></div></div>`)[0];
+                popup_690f745a33646fbc7defa88086d256f8.setContent(html_e3e56a34717b87a932c8adc4ef5296c8);
             
         
 
-        circle_marker_e43d0b7c5c44ab6a8dffea1c106573f2.bindPopup(popup_33d518665fd92206bdf1e58c8b392255)
+        circle_marker_f0c90b869fa694cc0956edd66a994328.bindPopup(popup_690f745a33646fbc7defa88086d256f8)
         ;
 
         
     
     
-            feature_group_92b3018e4a5886ab2305c0cc86d8029f.addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            circle_marker_f0c90b869fa694cc0956edd66a994328.bindTooltip(
+                `<div>
+                     policlinico sersimed sede ilo | 29951
+                 </div>`,
+                {
+  "opacity": 0,
+  "sticky": false,
+}
+            );
         
     
-            var feature_group_65b9c9758137c53e671accd035403531 = L.featureGroup(
+            feature_group_4e9f7921fc39787f8d15ce6153f65dea.addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
+        
+    
+            var feature_group_c9fa70c5e7a488be00c2927e168e1a38 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_65b9c9758137c53e671accd035403531.addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            feature_group_c9fa70c5e7a488be00c2927e168e1a38.addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
         
     
-            map_e84feac083c47c24ca3b04c9e6077f9b.fitBounds(
+            map_6d448bef4c214209dbf473b3d4e4b0f5.fitBounds(
                 [[-17.65185454, -71.34179435], [-17.65268394, -71.33634812], [-17.65242835, -71.33664585], [-17.64437606, -71.34377752], [-17.66006398, -71.3324777], [-17.634884, -71.334828], [-17.65055996, -71.33266009], [-17.641547, -71.339129], [-17.64434949, -71.34503948], [-17.643273, -71.341157], [-17.65011675, -71.33163445]],
                 {}
             );
         
     
-            var layer_control_bb24f61085926cacab65b24fdb80cbe6_layers = {
+            var layer_control_93b707e52089025a474ad78a77861783_layers = {
                 base_layers : {
-                    "openstreetmap" : tile_layer_792479faee3007dfa2641173134629b6,
+                    "openstreetmap" : tile_layer_5d974acfe3e844f59376338be96f3bf4,
                 },
                 overlays :  {
-                    "contorno" : feature_group_672a9643788aace4f16a25de06eccee5,
-                    "establecimientos: buffers (100m)" : feature_group_dfee8a9998122532515493228b4107d2,
-                    "establecimientos: puntos" : feature_group_92b3018e4a5886ab2305c0cc86d8029f,
-                    "siniestros fatales" : feature_group_65b9c9758137c53e671accd035403531,
+                    "contorno" : feature_group_0f76818c6fd4c3d66664c7d202f98db6,
+                    "establecimientos: buffers (100m)" : feature_group_142bb36e750775bfa1e5f0c960c6b20b,
+                    "establecimientos: puntos" : feature_group_4e9f7921fc39787f8d15ce6153f65dea,
+                    "siniestros fatales" : feature_group_c9fa70c5e7a488be00c2927e168e1a38,
                 },
             };
-            let layer_control_bb24f61085926cacab65b24fdb80cbe6 = L.control.layers(
-                layer_control_bb24f61085926cacab65b24fdb80cbe6_layers.base_layers,
-                layer_control_bb24f61085926cacab65b24fdb80cbe6_layers.overlays,
+            let layer_control_93b707e52089025a474ad78a77861783 = L.control.layers(
+                layer_control_93b707e52089025a474ad78a77861783_layers.base_layers,
+                layer_control_93b707e52089025a474ad78a77861783_layers.overlays,
                 {
   "position": "topright",
   "collapsed": true,
   "autoZIndex": true,
 }
-            ).addTo(map_e84feac083c47c24ca3b04c9e6077f9b);
+            ).addTo(map_6d448bef4c214209dbf473b3d4e4b0f5);
 
         
     
-        feature_group_92b3018e4a5886ab2305c0cc86d8029f.bringToFront();
-        feature_group_65b9c9758137c53e671accd035403531.bringToFront();
-
-        // --- Buscador dinámico ---
-        var map = map_e84feac083c47c24ca3b04c9e6077f9b;
-        var items = [{layer:circle_marker_43c2630c1fd6fa43f8f211abd312c2dd, lat:-17.65185454, lon:-71.34179435, nom:"C.S. ALTO ILO", cod:"2819"},{layer:circle_marker_833eea01a5158a1ee0167b033db85c6d, lat:-17.65268394, lon:-71.33634812, nom:"Centro Salud Mental Comunitario Ilo", cod:"23034"},{layer:circle_marker_006452f778c9840c396bffaf29d845ae, lat:-17.65242835, lon:-71.33664585, nom:"C.S. PAMPA INALAMBRICA", cod:"34031"},{layer:circle_marker_0e20ead792e18a9fe6c9affbd37bdc36, lat:-17.64437606, lon:-71.34377752, nom:"POSTA MEDICA POLICIAL ILO", cod:"25870"},{layer:circle_marker_e9afc7665debaf8bf753b7826fde4e58, lat:-17.66006398, lon:-71.3324777, nom:"POLICLINICO SAN GERONIMO", cod:"21767"},{layer:circle_marker_98b62ba10d4b4be3635b9b3211479c2e, lat:-17.634884, lon:-71.334828, nom:"C.S. MIRAMAR", cod:"2817"},{layer:circle_marker_b7a484dadf568263d88a0ef31bed9663, lat:-17.65055996, lon:-71.33266009, nom:"POLICLINICO MANCHEGO SAC", cod:"30305"},{layer:circle_marker_04f8b52d4e8f0d2fcc518df0ace75245, lat:-17.641547, lon:-71.339129, nom:"CLINICA SAGRADO CORAZON", cod:"27850"},{layer:circle_marker_6ffe51e3ed67a4b85f4348e8c42f3437, lat:-17.64434949, lon:-71.34503948, nom:"POLICLINICO SERVIMEDIQ", cod:"18616"},{layer:circle_marker_aad51c36f01dddc713f5e3385ae40e25, lat:-17.643273, lon:-71.341157, nom:"Centro Medico Especializado MMD 4M EIRL", cod:"30209"},{layer:circle_marker_e43d0b7c5c44ab6a8dffea1c106573f2, lat:-17.65011675, lon:-71.33163445, nom:"POLICLINICO SERSIMED SEDE ILO", cod:"29951"}];
+        feature_group_4e9f7921fc39787f8d15ce6153f65dea.bringToFront();
+        feature_group_c9fa70c5e7a488be00c2927e168e1a38.bringToFront();
+    
+    
+      (function() {
+        var puntosLayer = feature_group_4e9f7921fc39787f8d15ce6153f65dea;
         var defaultColor = "#1d4ed8";
-        var hitColor = "#facc15";
+        var hiliteColor  = "#f59e0b";
 
-        // util: normalizar (sin acentos, lowercase)
-        function norm(s) {
-            if (!s) return "";
-            return s.toString().toLowerCase()
-                     .normalize('NFD').replace(/[̀-ͯ]/g, '');
+        // --- helpers ---
+        function eachMarker(fn) {
+          if (!puntosLayer || !puntosLayer._layers) return;
+          Object.values(puntosLayer._layers).forEach(function(ly) {
+            if (ly && typeof ly.setStyle === 'function') fn(ly);
+          });
         }
 
-        function applySearch() {
-            var qNom = document.getElementById('zs_q_nom') ? norm(document.getElementById('zs_q_nom').value.trim()) : "";
-            var qCod = document.getElementById('zs_q_cod') ? norm(document.getElementById('zs_q_cod').value.trim()) : "";
-
-            var hits = [];
-            items.forEach(function(it) {
-                var n = norm(it.nom);
-                var c = norm(it.cod);
-                var ok = false;
-
-                if (qNom) ok = ok || (n.indexOf(qNom) !== -1);
-                if (qCod) ok = ok || (c.indexOf(qCod) !== -1);
-
-                // si ambos vacíos -> no resaltar
-                if (!qNom && !qCod) ok = false;
-
-                // cambiar estilo
-                if (it.layer && it.layer.setStyle) {
-                    it.layer.setStyle({color: ok ? hitColor : defaultColor, fillColor: ok ? hitColor : defaultColor});
-                }
-
-                if (ok) hits.push([it.lat, it.lon]);
-            });
-
-            if (hits.length > 0) {
-                var b = L.latLngBounds(hits);
-                map.fitBounds(b.pad(0.2));
-            } else {
-                // sin hits o sin filtros: no recentrar (opcional)
-            }
+        function getTooltipText(ly) {
+          try {
+            var t = ly.getTooltip();
+            return t ? String(t.getContent() || "").toLowerCase() : "";
+          } catch(e) {
+            return "";
+          }
         }
 
-        // insertar UI si las columnas existen
-        var enableNom = true;
-        var enableCod = true;
-        if (enableNom || enableCod) {
-            var box = document.createElement('div');
-            box.className = 'zs-search';
-            var html = '<h4>Buscar establecimientos</h4>';
-            if (enableNom) {
-                html += '<label for="zs_q_nom">Nombre del establecimiento</label>';
-                html += '<input id="zs_q_nom" type="text" placeholder="Ej.: Hospital, Centro de Salud">';
-            }
-            if (enableCod) {
-                html += '<label for="zs_q_cod">Código único</label>';
-                html += '<input id="zs_q_cod" type="text" placeholder="Ej.: 123456">';
-            }
-            html += '<div class="muted">Coincidencia por subcadena; el resaltado es OR entre campos.</div>';
-            box.innerHTML = html;
-            document.body.appendChild(box);
-
-            if (enableNom) document.getElementById('zs_q_nom').addEventListener('input', applySearch);
-            if (enableCod) document.getElementById('zs_q_cod').addEventListener('input', applySearch);
+        function clearHighlights() {
+          eachMarker(function(ly) { ly.setStyle({ color: defaultColor, fillColor: defaultColor }); });
         }
+
+        // --- búsqueda por campos ---
+        function searchAndHighlight() {
+          var qn_raw = (document.getElementById('q_name').value || "");
+          var qc_raw = (document.getElementById('q_code').value || "");
+          var qn = qn_raw.toLowerCase();
+          var qc = qc_raw.toLowerCase();
+
+          var useName = qn_raw.trim().length > 0;
+          var useCode = qc_raw.trim().length > 0;
+
+          clearHighlights();
+          if (!useName && !useCode) return;
+
+          var matchedLatLngs = [];
+          eachMarker(function(ly) {
+            var txt = getTooltipText(ly); // "nombre | codigo"
+            var parts = txt.split('|', 2);
+            var nameTxt = (parts[0] || '').trim();
+            var codeTxt = (parts[1] || '').trim();
+
+            var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+            var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+            if (matchName || matchCode) {
+              ly.setStyle({ color: hiliteColor, fillColor: hiliteColor });
+              if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+            }
+          });
+
+          if (matchedLatLngs.length > 0) {
+            var group = L.featureGroup(matchedLatLngs.map(function(ll) { return L.marker(ll); }));
+            try { ly_map.fitBounds(group.getBounds().pad(0.2)); } catch(e) {}
+          }
+        }
+
+        var ly_map = (function() {
+          var _m = null;
+          try { _m = puntosLayer._map || null; } catch(e) {}
+          return _m;
+        })();
+
+        document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+        document.getElementById('btn_clear').addEventListener('click', function() {
+          document.getElementById('q_name').value = "";
+          document.getElementById('q_code').value = "";
+          clearHighlights();
+        });
+        ['q_name','q_code'].forEach(function(id) {
+          var el = document.getElementById(id);
+          el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') searchAndHighlight(); });
+        });
+
+        // --- pin por coordenadas ---
+        var coordLayer = L.layerGroup().addTo(ly_map);
+        function goToXY() {
+          var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+          var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+          if (!isFinite(x) || !isFinite(y)) return;
+          coordLayer.clearLayers();
+          var mk = L.marker([y, x], { draggable:false, title: 'Punto (Y,X): '+y+', '+x });
+          mk.addTo(coordLayer);
+          ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+        }
+        function clearXY() { coordLayer.clearLayers(); }
+
+        document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+        document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+        // --- medición (dos puntos arrastrables + etiqueta sobre línea) ---
+        var measuring = false;
+        var mA = null, mB = null, mLine = null;
+
+        function haversine(lat1, lon1, lat2, lon2) {
+          var R = 6371000; // m
+          var dLat = (lat2-lat1) * Math.PI/180;
+          var dLon = (lon2-lon1) * Math.PI/180;
+          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                  Math.sin(dLon/2)*Math.sin(dLon/2);
+          var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return R * c;
+        }
+
+        function midPoint(a, b) {
+          return L.latLng( (a.lat + b.lat)/2, (a.lng + b.lng)/2 );
+        }
+
+        function updateMeasure() {
+          if (!(mA && mB)) return;
+          var a = mA.getLatLng(), b = mB.getLatLng();
+          var d = haversine(a.lat, a.lng, b.lat, b.lng);
+          var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+          if (!mLine) {
+            mLine = L.polyline([a, b], { color: '#111827', weight: 3, dashArray: '6,4' })
+              .bindTooltip(txt, { permanent:true, direction:'center', className:'dist-on-line' })
+              .addTo(ly_map);
+          } else {
+            mLine.setLatLngs([a, b]);
+            mLine.setTooltipContent(txt);
+          }
+        }
+
+        function clearMeasure() {
+          if (mA) ly_map.removeLayer(mA); mA = null;
+          if (mB) ly_map.removeLayer(mB); mB = null;
+          if (mLine) ly_map.removeLayer(mLine); mLine = null;
+        }
+
+        function toggleMeasure() {
+          measuring = !measuring;
+          var stateSpan = document.getElementById('measure_state');
+          stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+          stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+          if (!measuring) {
+            clearMeasure();
+            ly_map.getContainer().style.cursor = '';
+            return;
+          }
+          ly_map.getContainer().style.cursor = 'crosshair';
+        }
+
+        document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+        ly_map.on('click', function(ev) {
+          if (!measuring) return;
+          if (!mA) {
+            mA = L.marker(ev.latlng, { draggable:true, title:'Punto A' }).addTo(ly_map);
+            mA.on('drag', updateMeasure);
+          } else if (!mB) {
+            mB = L.marker(ev.latlng, { draggable:true, title:'Punto B' }).addTo(ly_map);
+            mB.on('drag', updateMeasure);
+          } else {
+            // Si ya existen A y B, mover B al nuevo click
+            mB.setLatLng(ev.latlng);
+          }
+          updateMeasure();
+        });
+
+        // --- Abrir en Google Maps la vista actual ---
+        function openInGoogleMaps() {
+          if (!ly_map) return;
+          var c = ly_map.getCenter();
+          var z = ly_map.getZoom();
+          // URL estilo @lat,lon,zoomz
+          var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+          window.open(url, '_blank');
+        }
+        document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+
+      })();
     
 </script>
 </html>

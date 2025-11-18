@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-maps_from_excels.py  (siniestros + filtro por contorno, sin Pane, con FeatureGroup + bringToFront)
+maps_from_excels.py  (Zonas Escolares + siniestros + contorno + buscadores + coords + medir + GMaps)
 
 Genera mapas interactivos por cada Excel individual en ZonasEscolares/excels/.
-- Título = "DEPARTAMENTO-PROVINCIA-DISTRITO" (desde columnas del Excel)
-- Fondo OpenStreetMap
+- Título = "DEPARTAMENTO-PROVINCIA-DISTRITO" (desde columnas del Excel) o UBIGEO gestor.
+- Fondo OpenStreetMap.
 - Para cada colegio:
     - Círculo ~100 m (fill_opacity=0.5), color según 'mantenimiento'
     - Punto (CircleMarker) sin transparencia, mismo color
+    - Popup con descripción, código CE, UBIGEO y AHORA también Latitud y Longitud
 - Siniestros fatales:
     - Puntos rojos (sin buffer), solo si caen dentro del contorno visualizado
     - Siempre por encima para permitir click
-- Leyenda: Azul = Nuevas, Celeste = Mantenimiento
+- Leyenda: Azul (Nuevas) = COLOR_FALSE, Celeste (Mantenimiento) = COLOR_TRUE
 - Contorno:
     - Si ubigeo_gestor termina en "01" -> geometría PROVINCIAL (Provincias1/2)
     - Si no termina en "01"           -> geometría DISTRITAL (Distritos)
-
-Uso:
-  python maps_from_excels.py \
-    --excels-dir ./ZonasEscolares/excels \
-    --out-dir    ./ZonasEscolares/maps \
-    --distritos-geojson   ./Data/Distritos.geojson \
-    --provincias-geojson  ./Data/Provincias1.geojson ./Data/Provincias2.geojson \
-    --siniestros-csv      ./Data/Siniestros.csv
+- UI derecha:
+    - Buscador por nombre (descripcion) y por código (codigo_ce)
+    - Buscador de coordenadas (Longitud / Latitud) con pin y centrar
+    - Medición de distancia (dos puntos arrastrables), etiqueta sobre la línea
+    - Botón "Abrir en Google Maps" para la vista actual
 """
 
 import argparse
@@ -36,9 +34,10 @@ from branca.element import MacroElement, Template
 TRUE_SET = {"true","1","si","sí","x","t","y","s","verdadero","yes"}
 FALSE_SET = {"false","0","no","n","f","flase","falso","not"}
 
-COLOR_TRUE   = "#7dd3fc"  # celeste = Mantenimiento (True)
-COLOR_FALSE  = "#1d4ed8"  # azul    = Nuevas (False)
-COLOR_FATAL  = "#d90429"  # rojo    = siniestros fatales
+COLOR_TRUE     = "#7dd3fc"  # celeste = Mantenimiento (True)
+COLOR_FALSE    = "#1d4ed8"  # azul    = Nuevas (False)
+COLOR_FATAL    = "#d90429"  # rojo    = siniestros fatales
+COLOR_CONTORNO = "#9ca3af"  # plomo   = contorno (relleno)
 
 # ---------------- utilitarios ----------------
 def to_bool_soft(x) -> bool:
@@ -71,16 +70,17 @@ def build_popup_colegio(row: pd.Series) -> str:
         parts.append(f"Código CE: {escape(fmt('codigo_ce'))}")
     if 'ubigeo_gestor' in row and pd.notna(row.get('ubigeo_gestor')):
         parts.append(f"UBIGEO gestor: {escape(fmt('ubigeo_gestor'))}")
+    # Lat/Long en popup
+    if 'latitud' in row and pd.notna(row.get('latitud')):
+        parts.append(f"Latitud: {escape(fmt('latitud'))}")
+    if 'longitud' in row and pd.notna(row.get('longitud')):
+        parts.append(f"Longitud: {escape(fmt('longitud'))}")
     for k,label in [("alumnos","Alumnos"),("docentes","Docentes"),("siniestros","Siniestros")]:
         if k in row and pd.notna(row[k]):
             parts.append(f"{label}: {escape(fmt(k))}")
     return "<br>".join(parts)
 
 def build_popup_siniestro(row: pd.Series) -> str:
-    """
-    Muestra TODAS las columnas del siniestro como tabla (excepto __lat__/__lon__ auxiliares).
-    Si un campo está vacío/NaN, se muestra el nombre y valor en blanco.
-    """
     rows = []
     for col, val in row.items():
         if col in ("__lat__", "__lon__"):
@@ -102,11 +102,10 @@ def build_popup_siniestro(row: pd.Series) -> str:
     )
     return table_html
 
-
 def title_from_row(df: pd.DataFrame) -> str:
-    dep = str(df["departamento"].dropna().iloc[0]).strip() if "departamento" in df.columns and df["departamento"].notna().any() else ""
-    prov= str(df["provincia"].dropna().iloc[0]).strip()     if "provincia" in df.columns and df["provincia"].notna().any() else ""
-    dist= str(df["distrito"].dropna().iloc[0]).strip()      if "distrito" in df.columns and df["distrito"].notna().any() else ""
+    dep  = str(df["departamento"].dropna().iloc[0]).strip() if "departamento" in df.columns and df["departamento"].notna().any() else ""
+    prov = str(df["provincia"].dropna().iloc[0]).strip()     if "provincia" in df.columns and df["provincia"].notna().any() else ""
+    dist = str(df["distrito"].dropna().iloc[0]).strip()      if "distrito" in df.columns and df["distrito"].notna().any() else ""
     parts = [p for p in (dep, prov, dist) if p]
     if parts:
         return "-".join(parts)
@@ -129,11 +128,11 @@ def add_title(m: folium.Map, text: str):
 
 def add_legend(m: folium.Map):
     html = f"""
-    <div style="
+    <div id="legend-box" style="
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
         background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 8px;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4;">
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15); line-height: 1.4; min-width: 240px;">
         <div style="font-weight: 600; margin-bottom: 6px;">Leyenda</div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <span style="display:inline-block; width:14px; height:14px; background:{COLOR_FALSE}; border-radius:50%;"></span>
@@ -153,7 +152,6 @@ def add_legend(m: folium.Map):
 
 # ---------- helpers geometrías (contornos) ----------
 def features_distrito_por_ubigeo(distritos_gj: dict, target_ubi6: str):
-    """Filtra features de distritos cuyo IDDIST coincide con el ubigeo (6 dígitos)."""
     feats = []
     for feat in distritos_gj.get("features", []):
         props = feat.get("properties") or {}
@@ -163,11 +161,6 @@ def features_distrito_por_ubigeo(distritos_gj: dict, target_ubi6: str):
     return feats
 
 def features_provincia_por_ubigeo(prov_gj_list: list, target_ubi6: str):
-    """
-    Filtra features provinciales:
-    - Si existe una clave que contenga 'ubigeo' -> se compara a 6 dígitos == target_ubi6
-    - Si no, intenta con 'IDPROV' (4 dígitos) comparando primeros 4 de target_ubi6
-    """
     target4 = target_ubi6[:4] if target_ubi6 else None
     feats = []
     for prov_gj in prov_gj_list:
@@ -189,17 +182,14 @@ def features_provincia_por_ubigeo(prov_gj_list: list, target_ubi6: str):
                     feats.append(feat)
     return feats
 
-# ---------- punto en polígono (lon,lat) sobre GeoJSON) ----------
+# ---------- punto en polígono ----------
 def _point_in_ring(lon, lat, ring):
-    """Ray casting sobre un ring (lista de [lon,lat]). True si dentro (ignora agujeros)."""
     inside = False
-    if not ring:
-        return False
+    if not ring: return False
     n = len(ring)
     for i in range(n):
         x1, y1 = ring[i][0], ring[i][1]
         x2, y2 = ring[(i + 1) % n][0], ring[(i + 1) % n][1]
-        # Chequea intersección con semirrecta hacia +X
         if ((y1 > lat) != (y2 > lat)):
             x_inter = (x2 - x1) * (lat - y1) / (y2 - y1 + 1e-15) + x1
             if x_inter > lon:
@@ -207,23 +197,17 @@ def _point_in_ring(lon, lat, ring):
     return inside
 
 def point_in_polygon(lon, lat, polygon_coords):
-    """
-    polygon_coords: [ [ring_exterior], [ring_hole1], ... ]
-    Consideramos exterior y restamos agujeros: true si dentro exterior y fuera de agujeros.
-    """
     if not polygon_coords:
         return False
     exterior = polygon_coords[0]
     if not _point_in_ring(lon, lat, exterior):
         return False
-    # Si cae en un agujero, se excluye
     for hole in polygon_coords[1:]:
         if _point_in_ring(lon, lat, hole):
             return False
     return True
 
 def point_in_features(lon, lat, feats):
-    """True si (lon,lat) cae en cualquiera de los features (Polygon o MultiPolygon)."""
     for feat in feats:
         geom = feat.get("geometry") or {}
         gtype = geom.get("type")
@@ -249,41 +233,22 @@ def pick_col(columns, *cands):
     return None
 
 def load_siniestros_csv(path: Path) -> pd.DataFrame:
-    """
-    Lee el CSV de siniestros probando varios 'encoding' y detectando el separador.
-    Devuelve un DataFrame con columnas auxiliares __lat__ y __lon__ en float.
-    """
     encodings = ["utf-8-sig", "cp1252", "latin-1", "utf-16", "utf-8"]
     last_err = None
     for enc in encodings:
         try:
-            # sep=None + engine="python" deja que pandas huela coma/;|tab, etc.
             df = pd.read_csv(path, dtype=str, sep=None, engine="python", encoding=enc)
             break
         except UnicodeDecodeError as e:
             last_err = e
             continue
     else:
-        raise UnicodeDecodeError(
-            f"No se pudo decodificar {path}. Último error: {last_err}"
-        )
-
-    # Detectar columnas lat/lon con varios alias
-    def pick_col(columns, *cands):
-        cols = {str(c).strip().lower(): c for c in columns}
-        for k in cands:
-            lk = str(k).strip().lower()
-            if lk in cols:
-                return cols[lk]
-        return None
+        raise UnicodeDecodeError(f"No se pudo decodificar {path}. Último error: {last_err}")
 
     col_lat = pick_col(df.columns, "latitud","latitude","lat","y")
     col_lon = pick_col(df.columns, "longitud","longitude","lon","long","x")
     if not col_lat or not col_lon:
-        raise KeyError(
-            f"Siniestros: no encuentro columnas lat/lon (busqué latitud/lat, longitud/lon). "
-            f"Encabezados={list(df.columns)}"
-        )
+        raise KeyError(f"Siniestros: no encuentro columnas lat/lon. Encabezados={list(df.columns)}")
 
     df = df.copy()
     df["__lat__"] = pd.to_numeric(df[col_lat], errors="coerce")
@@ -309,17 +274,45 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     lon0 = float(df["longitud"].mean())
     m = folium.Map(location=[lat0, lon0], tiles="OpenStreetMap", zoom_start=14, control_scale=True)
 
-    # CSS: desactivar eventos en círculos (para que no bloqueen clics)
+    # CSS
     m.get_root().html.add_child(folium.Element("""
     <style>
       .leaflet-interactive.zs-buffer { pointer-events: none !important; }
+      .searchbar-wrap {
+        position: fixed; right: 20px; bottom: 140px;
+        z-index: 10000; background: rgba(255,255,255,0.95);
+        padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        font-family: system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        display:flex; flex-direction: column; gap:8px; min-width: 300px;
+      }
+      .row-flex { display:flex; gap:8px; align-items:center; }
+      .col-flex { display:flex; flex-direction:column; gap:8px; }
+      .row-flex input, .col-flex input {
+        border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:13px; flex:1;
+      }
+      .row-flex button, .col-flex button {
+        border:0; border-radius:8px; padding:6px 10px; font-weight:600; cursor:pointer;
+      }
+      .btn-dark  { background:#111827; color:#fff; }
+      .btn-gray  { background:#6b7280; color:#fff; }
+      .btn-green { background:#065f46; color:#fff; }
+      .btn-red   { background:#991b1b; color:#fff; }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; }
+      .dist-on-line {
+        background: rgba(17,24,39,0.85);
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
     </style>
     """))
 
     add_title(m, title_from_row(df))
     add_legend(m)
 
-    # FeatureGroups para controlar orden sin panes
+    # FeatureGroups
     fg_contorno   = folium.FeatureGroup(name="contorno", show=True)
     fg_circulos   = folium.FeatureGroup(name="colegios: buffers", show=True)
     fg_puntos     = folium.FeatureGroup(name="colegios: puntos", show=True)
@@ -330,7 +323,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
     m.add_child(fg_puntos)
     m.add_child(fg_siniestros)
 
-    # Contorno por UBIGEO
+    # Contorno
     target_ubi = to_ubigeo6(df["ubigeo_gestor"].dropna().iloc[0]) if "ubigeo_gestor" in df.columns and df["ubigeo_gestor"].notna().any() else None
     feats = []
     if target_ubi:
@@ -348,8 +341,8 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                     "weight": 2.5,
                     "opacity": 1.0,
                     "fill": True,
-                    "fillColor": "#FFA500",
-                    "fillOpacity": 0.6
+                    "fillColor": COLOR_CONTORNO,
+                    "fillOpacity": 0.3
                 }
             ).add_to(fg_contorno)
 
@@ -360,7 +353,6 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
         mant = to_bool_soft(row.get("mantenimiento"))
         color = COLOR_TRUE if mant else COLOR_FALSE
 
-        # Círculo ~100 m: sin interacción + clase CSS
         folium.Circle(
             location=(lat, lon),
             radius=100,
@@ -373,8 +365,7 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
             class_name="zs-buffer"
         ).add_to(fg_circulos)
 
-        # Punto exacto (con popup)
-        folium.CircleMarker(
+        marker = folium.CircleMarker(
             location=(lat, lon),
             radius=5,
             color=color,
@@ -382,12 +373,16 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
             fill=True,
             fill_color=color,
             fill_opacity=1.0,
-            popup=folium.Popup(build_popup_colegio(row), max_width=400),
-        ).add_to(fg_puntos)
+            popup=folium.Popup(build_popup_colegio(row), max_width=420),
+        )
+        desc_txt = "" if pd.isna(row.get("descripcion")) else str(row.get("descripcion"))
+        cod_txt  = "" if pd.isna(row.get("codigo_ce"))  else str(row.get("codigo_ce"))
+        folium.Tooltip((desc_txt.lower() + " | " + cod_txt.lower()), sticky=False, opacity=0).add_to(marker)
+        marker.add_to(fg_puntos)
 
         bounds.append((lat, lon))
 
-    # Siniestros: solo los que caen DENTRO del contorno (si hay contorno)
+    # Siniestros dentro del contorno
     if feats and not siniestros_df.empty:
         for _, r in siniestros_df.iterrows():
             slat = float(r["__lat__"]); slon = float(r["__lon__"])
@@ -403,20 +398,231 @@ def map_for_excel(xlsx_path: Path, out_dir: Path, distritos_gj: dict, provincias
                     popup=folium.Popup(build_popup_siniestro(r), max_width=420),
                 ).add_to(fg_siniestros)
 
-    # Forzar orden: primero puntos de colegios, luego siniestros arriba del todo
-    tpl = Template(f"""
+    # Orden de capas al frente (nota: f-string + llaves escapadas para Jinja)
+    tpl_front = Template(f"""
     {{% macro script(this, kwargs) %}}
         {fg_puntos.get_name()}.bringToFront();
         {fg_siniestros.get_name()}.bringToFront();
     {{% endmacro %}}
     """)
-    me = MacroElement(); me._template = tpl
-    m.get_root().add_child(me)
+    me_front = MacroElement(); me_front._template = tpl_front
+    m.get_root().add_child(me_front)
 
     if len(bounds) >= 2:
         m.fit_bounds(bounds)
 
     folium.LayerControl(collapsed=True).add_to(m)
+
+    # ---------- UI derecha: buscadores + coords + medir + Google Maps ----------
+    # Usamos f-string y escapamos TODAS las llaves de JS/Jinja con doble {{ }}
+    search_ui = Template(f"""
+    {{% macro html(this, kwargs) %}}
+      <div class="searchbar-wrap">
+        <div class="col-flex">
+          <input id="q_name" type="text" placeholder="Buscar por nombre">
+          <input id="q_code" type="text" placeholder="Buscar por código">
+        </div>
+        <div class="row-flex">
+          <button id="btn_search" class="btn-dark">Buscar</button>
+          <button id="btn_clear" class="btn-gray">Limpiar</button>
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb; margin:4px 0;">
+        <div class="col-flex" title="Coordenadas en grados decimales">
+          <input id="q_x" type="text" placeholder="Longitud Ejem: -77.15435">
+          <div class="row-flex">
+            <input id="q_y" type="text" placeholder="Latitud Ejem: -15.54648">
+            <button id="btn_xy_go" class="btn-green" title="Centrar en coordenadas">🔍</button>
+            <button id="btn_xy_clear" class="btn-red"   title="Quitar pin de coordenadas">✕</button>
+          </div>
+        </div>
+        <div class="row-flex">
+          <button id="btn_measure_toggle" class="btn-dark pill" title="Medir distancia">Medir distancia</button>
+          <span id="measure_state" style="font-size:12px; color:#991b1b">Desactivado</span>
+        </div>
+        <div class="row-flex">
+          <button id="btn_open_gmaps" class="btn-dark" title="Abrir esta vista en Google Maps">Abrir en Google Maps</button>
+        </div>
+      </div>
+    {{% endmacro %}}
+
+    {{% macro script(this, kwargs) %}}
+      (function() {{
+        var puntosLayer = {fg_puntos.get_name()};
+        var defaultTrue  = "{COLOR_TRUE}";
+        var defaultFalse = "{COLOR_FALSE}";
+        var hiliteColor  = "#f59e0b";
+
+        function eachMarker(fn) {{
+          if (!puntosLayer || !puntosLayer._layers) return;
+          Object.values(puntosLayer._layers).forEach(function(ly) {{
+            if (ly && typeof ly.setStyle === 'function') fn(ly);
+          }});
+        }}
+
+        function getTooltipText(ly) {{
+          try {{
+            var t = ly.getTooltip();
+            return t ? String(t.getContent() || "").toLowerCase() : "";
+          }} catch(e) {{
+            return "";
+          }}
+        }}
+
+        function clearHighlights() {{
+          eachMarker(function(ly) {{
+            var st = (ly.options || {{}});
+            if (!st._origColor) {{ st._origColor = st.color; }}
+            var orig = (st.color === hiliteColor) ? st._origColor : st.color;
+            ly.setStyle({{ color: orig || defaultFalse, fillColor: orig || defaultFalse }});
+          }});
+        }}
+
+        function searchAndHighlight() {{
+          var qn_raw = (document.getElementById('q_name').value || "");
+          var qc_raw = (document.getElementById('q_code').value || "");
+          var qn = qn_raw.toLowerCase();
+          var qc = qc_raw.toLowerCase();
+
+          var useName = qn_raw.trim().length > 0;
+          var useCode = qc_raw.trim().length > 0;
+
+          clearHighlights();
+          if (!useName && !useCode) return;
+
+          var matchedLatLngs = [];
+          eachMarker(function(ly) {{
+            var txt = getTooltipText(ly);
+            var parts = txt.split('|', 2);
+            var nameTxt = (parts[0] || '').trim();
+            var codeTxt = (parts[1] || '').trim();
+
+            var matchName = useName ? (nameTxt.indexOf(qn) !== -1) : false;
+            var matchCode = useCode ? (codeTxt.indexOf(qc) !== -1) : false;
+
+            if (matchName || matchCode) {{
+              if (!ly.options._origColor) {{ ly.options._origColor = ly.options.color; }}
+              ly.setStyle({{ color: hiliteColor, fillColor: hiliteColor }});
+              if (ly.getLatLng) matchedLatLngs.push(ly.getLatLng());
+            }}
+          }});
+
+          if (matchedLatLngs.length > 0) {{
+            var group = L.featureGroup(matchedLatLngs.map(function(ll) {{ return L.marker(ll); }}));
+            try {{ puntosLayer._map.fitBounds(group.getBounds().pad(0.2)); }} catch(e) {{}}
+          }}
+        }}
+
+        var ly_map = (function() {{
+          var _m = null;
+          try {{ _m = puntosLayer._map || null; }} catch(e) {{}}
+          return _m;
+        }})();
+
+        document.getElementById('btn_search').addEventListener('click', searchAndHighlight);
+        document.getElementById('btn_clear').addEventListener('click', function() {{
+          document.getElementById('q_name').value = "";
+          document.getElementById('q_code').value = "";
+          clearHighlights();
+        }});
+        ['q_name','q_code'].forEach(function(id) {{
+          var el = document.getElementById(id);
+          el.addEventListener('keydown', function(ev) {{ if (ev.key === 'Enter') searchAndHighlight(); }});
+        }});
+
+        var coordLayer = L.layerGroup().addTo(ly_map);
+        function goToXY() {{
+          var x = parseFloat((document.getElementById('q_x').value || '').replace(',', '.'));
+          var y = parseFloat((document.getElementById('q_y').value || '').replace(',', '.'));
+          if (!isFinite(x) || !isFinite(y)) return;
+          coordLayer.clearLayers();
+          var mk = L.marker([y, x], {{ draggable:false, title: 'Punto (Y,X): '+y+', '+x }});
+          mk.addTo(coordLayer);
+          ly_map.setView([y, x], Math.max(ly_map.getZoom(), 17));
+        }}
+        function clearXY() {{ coordLayer.clearLayers(); }}
+
+        document.getElementById('btn_xy_go').addEventListener('click', goToXY);
+        document.getElementById('btn_xy_clear').addEventListener('click', clearXY);
+
+        var measuring = false;
+        var mA = null, mB = null, mLine = null;
+
+        function haversine(lat1, lon1, lat2, lon2) {{
+          var R = 6371000;
+          var dLat = (lat2-lat1) * Math.PI/180;
+          var dLon = (lon2-lon1) * Math.PI/180;
+          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+                  Math.sin(dLon/2)*Math.sin(dLon/2);
+          var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return R * c;
+        }}
+
+        function updateMeasure() {{
+          if (!(mA && mB)) return;
+          var a = mA.getLatLng(), b = mB.getLatLng();
+          var d = haversine(a.lat, a.lng, b.lat, b.lng);
+          var txt = (d >= 1000) ? (d/1000).toFixed(3)+' km' : Math.round(d)+' m';
+
+          if (!mLine) {{
+            mLine = L.polyline([a, b], {{ color: '#111827', weight: 3, dashArray: '6,4' }})
+              .bindTooltip(txt, {{ permanent:true, direction:'center', className:'dist-on-line' }})
+              .addTo(ly_map);
+          }} else {{
+            mLine.setLatLngs([a, b]);
+            mLine.setTooltipContent(txt);
+          }}
+        }}
+
+        function clearMeasure() {{
+          if (mA) ly_map.removeLayer(mA); mA = null;
+          if (mB) ly_map.removeLayer(mB); mB = null;
+          if (mLine) ly_map.removeLayer(mLine); mLine = null;
+        }}
+
+        function toggleMeasure() {{
+          measuring = !measuring;
+          var stateSpan = document.getElementById('measure_state');
+          stateSpan.textContent = measuring ? 'Activo' : 'Desactivado';
+          stateSpan.style.color = measuring ? '#065f46' : '#991b1b';
+          if (!measuring) {{
+            clearMeasure();
+            ly_map.getContainer().style.cursor = '';
+            return;
+          }}
+          ly_map.getContainer().style.cursor = 'crosshair';
+        }}
+
+        document.getElementById('btn_measure_toggle').addEventListener('click', toggleMeasure);
+
+        ly_map.on('click', function(ev) {{
+          if (!measuring) return;
+          if (!mA) {{
+            mA = L.marker(ev.latlng, {{ draggable:true, title:'Punto A' }}).addTo(ly_map);
+            mA.on('drag', updateMeasure);
+          }} else if (!mB) {{
+            mB = L.marker(ev.latlng, {{ draggable:true, title:'Punto B' }}).addTo(ly_map);
+            mB.on('drag', updateMeasure);
+          }} else {{
+            mB.setLatLng(ev.latlng);
+          }}
+          updateMeasure();
+        }});
+
+        function openInGoogleMaps() {{
+          if (!ly_map) return;
+          var c = ly_map.getCenter();
+          var z = ly_map.getZoom();
+          var url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lng + ',' + z + 'z';
+          window.open(url, '_blank');
+        }}
+        document.getElementById('btn_open_gmaps').addEventListener('click', openInGoogleMaps);
+
+      }})();
+    {{% endmacro %}}
+    """)
+    me_search = MacroElement(); me_search._template = search_ui
+    m.get_root().add_child(me_search)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     html_name = xlsx_path.with_suffix(".html").name
@@ -437,7 +643,7 @@ def write_index(index_path: Path, items):
 
 # ---------------- main ----------------
 def main():
-    ap = argparse.ArgumentParser(description="Generar mapas interactivos (HTML) por Excel individual con título, leyenda, contorno y siniestros.")
+    ap = argparse.ArgumentParser(description="Generar mapas interactivos (HTML) por Excel individual con título, leyenda, contorno, buscadores y siniestros.")
     ap.add_argument("--excels-dir",        default="./ZonasEscolares/excels")
     ap.add_argument("--out-dir",           default="./ZonasEscolares/maps")
     ap.add_argument("--distritos-geojson", default="./Data/Distritos.geojson",
@@ -452,13 +658,11 @@ def main():
     excels_root = Path(args.excels_dir)
     out_root    = Path(args.out_dir)
 
-    # GeoJSON distritos
     distritos_path = Path(args.distritos_geojson)
     assert distritos_path.exists(), f"No existe: {distritos_path}"
     with distritos_path.open("r", encoding="utf-8") as f:
         distritos_gj = json.load(f)
 
-    # GeoJSON provincias
     provincias_gj_list = []
     for p in args.provincias_geojson:
         pp = Path(p)
@@ -466,7 +670,6 @@ def main():
         with pp.open("r", encoding="utf-8") as f:
             provincias_gj_list.append(json.load(f))
 
-    # Siniestros
     siniestros_path = Path(args.siniestros_csv)
     assert siniestros_path.exists(), f"No existe: {siniestros_path}"
     siniestros_df = load_siniestros_csv(siniestros_path)
@@ -475,6 +678,10 @@ def main():
     if not excel_files:
         print(f"No se encontraron .xlsx en {excels_root.resolve()}")
         return
+
+    # --- SOLO EL PRIMERO ---
+    excel_files = excel_files[:1]
+    print(f"Procesando solo el primer archivo: {excel_files[0].name}")
 
     generated = []
     for x in excel_files:
